@@ -1,12 +1,11 @@
 package com.springjwt.repository;
-import com.springjwt.models.Admin;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import com.springjwt.models.Vendeur;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface AdminRepository extends JpaRepository<Admin, Long> {
-    boolean existsByType(String type);
+public interface VendeurRepository extends JpaRepository<Vendeur, Long> {
 
 
 }

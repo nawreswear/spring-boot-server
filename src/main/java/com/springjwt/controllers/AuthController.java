@@ -27,6 +27,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import javax.transaction.Transactional;
 import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
@@ -163,7 +165,7 @@ public class AuthController {
                 newUser = admin;
                 adminService.save(admin);
 
-            } else  {//if (type.startsWith("vendeur"))
+            } else  {
                 Vendeur vendeur = new Vendeur();
                 vendeur.setNom(signUpRequest.getNom());
                 vendeur.setPrenom(signUpRequest.getPrenom());
@@ -175,22 +177,7 @@ public class AuthController {
                 vendeur.setPassword(encoder.encode(signUpRequest.getPassword()));
                 newUser = vendeur;
                 vendeurService.save(vendeur);
-            } /*else {
-                user = new User();
-                user.setNom(signUpRequest.getNom());
-                user.setPrenom(signUpRequest.getPrenom());
-                user.setEmail(signUpRequest.getEmail());
-                user.setTel(signUpRequest.getTel());
-                user.setCin(signUpRequest.getCin());
-                user.setType("user");
-                user.setPhoto(signUpRequest.getPhoto());
-                user.setPassword(encoder.encode(signUpRequest.getPassword()));
-                newUser = user;
-                userService.save(user);
-            }*/
-            //return ResponseEntity.ok().build();
-// Générez le token JWT pour cet utilisateur nouvellement enregistré
-            // Générer le token JWT pour l'utilisateur nouvellement enregistré
+            }
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(signUpRequest.getEmail(), signUpRequest.getPassword()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -301,15 +288,17 @@ public class AuthController {
     }
 
     @DeleteMapping("/deleteUser/{userId}")
+    @Transactional
     public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
         if (!userRepository.existsById(userId)) {
             return ResponseEntity
                     .badRequest()
-                    .body(new MessageResponse("Error: User not found with id " + userId));
+                    .body(new MessageResponse("Erreur : Utilisateur non trouvé avec l'identifiant " + userId));
         }
         userService.deleteUser(userId);
-        return ResponseEntity.ok(new MessageResponse("User deleted successfully."));
+        return ResponseEntity.ok(new MessageResponse("Utilisateur supprimé avec succès."));
     }
+
 
     @DeleteMapping("/deleteAdmin/{adminId}")
     public ResponseEntity<?> deleteAdmin(@PathVariable Long adminId) {

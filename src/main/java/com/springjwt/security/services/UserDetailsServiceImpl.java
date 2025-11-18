@@ -1,9 +1,11 @@
 package com.springjwt.security.services;
 import com.springjwt.models.User;
 import com.springjwt.models.Vendeur;
+import com.springjwt.repository.AdminRepository;
 import com.springjwt.repository.UserRepository;
 import com.springjwt.repository.VendeurRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -30,7 +32,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Autowired
     private VendeurService  vendeurSerive;
 
-
+    @Autowired
+    private AdminRepository adminRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -56,11 +59,38 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public User save(User user) {
         return userRepository.save(user);
     }
-
+      /*  @Transactional
+        public void deleteUser(Long userId) {
+            // Supprimer l'utilisateur
+            userRepository.deleteById(userId);
+        }*/
+    @Transactional
     public void deleteUser(Long userId) {
-        userRepository.deleteById(userId);
+    User   User= getUserById(userId);
+        switch (User.getType().toLowerCase()) {
+            case "admin":
+                if (adminRepository.existsById(userId)) {
+                    adminRepository.deleteById(userId);
+                } else {
+                    throw new EntityNotFoundException("Aucun admin avec l'id " + userId + " n'existe!");
+                }
+                break;
+            case "vendeur":
+                if (vendeurRepository.existsById(userId)) {
+                    vendeurRepository.deleteById(userId);
+                } else {
+                    throw new EntityNotFoundException("Aucun vendeur avec l'id " + userId + " n'existe!");
+                }
+                break;
+            default:
+                if (userRepository.existsById(userId)) {
+                    userRepository.deleteById(userId);
+                } else {
+                    throw new EntityNotFoundException("Aucun utilisateur avec l'id " + userId + " n'existe!");
+                }
+                break;
+        }
     }
-
     public void update(User updatedUser) {
         userRepository.findById(updatedUser.getId()).ifPresent(existingUser -> {
             existingUser.setType(updatedUser.getType());
