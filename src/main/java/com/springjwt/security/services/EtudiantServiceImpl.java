@@ -1,54 +1,53 @@
 package com.springjwt.security.services;
 
-import com.springjwt.models.Vendeur;
-import com.springjwt.repository.VendeurRepository;
+import com.springjwt.models.Etudiant;
+import com.springjwt.repository.EtudiantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 
 @Transactional
 @Service
-public class VendeurServiceImp implements VendeurService {
+public class EtudiantServiceImpl implements EtudiantService {
+
     @Autowired
-    private VendeurRepository vr;
+    private EtudiantRepository etudiantRepository;
 
     @Override
-    public Vendeur save(Vendeur v) {
-        if (vr != null) {
-            return vr.save(v);
+    public Etudiant save(Etudiant e) {
+        if (etudiantRepository != null) {
+            return etudiantRepository.save(e);
         }
         return null;
     }
+
     @Override
-    public void processVendeurRequest(Vendeur vendeur) {
-        // Perform validation on the vendeur data (e.g., check for required fields)
-        if (!isValidVendeur(vendeur)) {
-            throw new IllegalArgumentException("Invalid vendeur data");
+    public void processEtudiantRequest(Etudiant etudiant) {
+        // Validation logic
+        if (!isValidEtudiant(etudiant)) {
+            throw new IllegalArgumentException("Invalid student data");
         }
-        vr.save(vendeur);
+        etudiantRepository.save(etudiant);
     }
+
     @Override
-    public List<Vendeur> getAllVendeurRequests() {
-        return vr.findAll(); // Assuming vendeurRepository is your repository for managing vendeur entities
+    public List<Etudiant> getAllEtudiantRequests() {
+        return etudiantRepository.findAll();
     }
-    private boolean isValidVendeur(Vendeur vendeur) {
-        // Perform validation logic here
-        return vendeur != null
-                && isValidString(String.valueOf(vendeur.getId()))
-                && isValidString(vendeur.getNom())
-                && isValidString(vendeur.getEmail())
-                && isValidString(vendeur.getPassword())
-                && isValidString(vendeur.getPrenom())
-                && isValidString(String.valueOf(vendeur.getTel()))
-                && isValidString(vendeur.getType())
-                && vendeur.getCodePostal() != null
-                && isValidString(vendeur.getPays())
-                && isValidString(vendeur.getVille())
-                && vendeur.getCin() != null
-                && isValidString(vendeur.getPhoto());
+
+    private boolean isValidEtudiant(Etudiant etudiant) {
+        return etudiant != null
+                && isValidString(etudiant.getNom())
+                && isValidString(etudiant.getPrenom())
+                && isValidString(etudiant.getEmail())
+                && isValidString(etudiant.getPassword())
+                && etudiant.getTel() != null
+                && etudiant.getCodePostal() != null
+                && isValidString(etudiant.getPays())
+                && isValidString(etudiant.getVille())
+                && etudiant.getCin() != null;
     }
 
     private boolean isValidString(String value) {
@@ -56,42 +55,45 @@ public class VendeurServiceImp implements VendeurService {
     }
 
     @Override
-    public Vendeur update(Vendeur updatedVendeur) {
-        if (vr != null) {
-            Vendeur existingVendeur = vr.findById(updatedVendeur.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Vendeur not found with id: " + updatedVendeur.getId()));
-            existingVendeur.setType(updatedVendeur.getType());
-            existingVendeur.setNom(updatedVendeur.getNom());
-            existingVendeur.setPrenom(updatedVendeur.getPrenom());
-            existingVendeur.setTel(updatedVendeur.getTel());
-            existingVendeur.setEmail(updatedVendeur.getEmail());
-            existingVendeur.setPassword(updatedVendeur.getPassword());
-            existingVendeur.setCodePostal(updatedVendeur.getCodePostal());
-            existingVendeur.setPays(updatedVendeur.getPays());
-            existingVendeur.setVille(updatedVendeur.getVille());
-            existingVendeur.setCin(updatedVendeur.getCin());
-            existingVendeur.setLongitude(updatedVendeur.getLongitude());
-            existingVendeur.setLatitude(updatedVendeur.getLatitude());
-            existingVendeur.setPhoto(updatedVendeur.getPhoto());
-            return vr.save(existingVendeur);
+    public Etudiant update(Etudiant updatedEtudiant) {
+        if (etudiantRepository != null) {
+            Etudiant existingEtudiant = etudiantRepository.findById(updatedEtudiant.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Etudiant not found with id: " + updatedEtudiant.getId()));
+
+            existingEtudiant.setNom(updatedEtudiant.getNom());
+            existingEtudiant.setPrenom(updatedEtudiant.getPrenom());
+            existingEtudiant.setTel(updatedEtudiant.getTel());
+            existingEtudiant.setEmail(updatedEtudiant.getEmail());
+            existingEtudiant.setPassword(updatedEtudiant.getPassword());
+            existingEtudiant.setCodePostal(updatedEtudiant.getCodePostal());
+            existingEtudiant.setPays(updatedEtudiant.getPays());
+            existingEtudiant.setVille(updatedEtudiant.getVille());
+            existingEtudiant.setCin(updatedEtudiant.getCin());
+            existingEtudiant.setLongitude(updatedEtudiant.getLongitude());
+            existingEtudiant.setLatitude(updatedEtudiant.getLatitude());
+            existingEtudiant.setPhoto(updatedEtudiant.getPhoto());
+            existingEtudiant.setType(updatedEtudiant.getType());
+
+            return etudiantRepository.save(existingEtudiant);
         }
         return null;
     }
 
     @Override
-    public void deletevendeur(Long id) {
-        if (vr != null) {
-            vr.deleteById(id);
+    public void deleteEtudiant(Long id) {
+        if (etudiantRepository != null) {
+            etudiantRepository.deleteById(id);
         }
     }
+
     @Override
-    public List<Vendeur> getAll() {
-        return vr.findAll();
-    }
-    @Override
-    public Vendeur getById(Long id) {
-        Optional<Vendeur> vendeurOptional = vr.findById(id);
-        return vendeurOptional.orElse(null);
+    public List<Etudiant> getAll() {
+        return etudiantRepository.findAll();
     }
 
+    @Override
+    public Etudiant getById(Long id) {
+        Optional<Etudiant> etudiantOptional = etudiantRepository.findById(id);
+        return etudiantOptional.orElse(null);
+    }
 }

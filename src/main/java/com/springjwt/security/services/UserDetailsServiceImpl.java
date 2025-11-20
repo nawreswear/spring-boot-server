@@ -1,24 +1,19 @@
 package com.springjwt.security.services;
-import com.springjwt.models.User;
-import com.springjwt.models.Vendeur;
+
+import com.springjwt.models.*;
 import com.springjwt.repository.AdminRepository;
+import com.springjwt.repository.EtudiantRepository;
+import com.springjwt.repository.EnseignantRepository;
 import com.springjwt.repository.UserRepository;
-import com.springjwt.repository.VendeurRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
-import javax.persistence.EntityManager;
 import javax.persistence.EntityNotFoundException;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
 import javax.transaction.Transactional;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
@@ -27,70 +22,80 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     private UserRepository userRepository;
 
     @Autowired
-    private VendeurRepository vendeurRepository;
-
-    @Autowired
-    private VendeurService  vendeurSerive;
-
-    @Autowired
     private AdminRepository adminRepository;
 
+    @Autowired
+    private EnseignantRepository enseignantRepository;
+
+    @Autowired
+    private EtudiantRepository etudiantRepository;
+
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(username);
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email);
         if (user == null) {
-            throw new UsernameNotFoundException("Utilisateur non trouvé avec l'adresse email : " + username);
+            throw new UsernameNotFoundException("User not found with email: " + email);
         }
         return UserDetailsImpl.build(user.getType(), user);
     }
 
-    public User findPhotoByNo(String nom) {
-        return userRepository.findPhotobyuser(nom); // Assurez-vous que cette méthode retourne une chaîne de caractères
-    }
+    // ------------------- GET & LIST -------------------
     public User getUserById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé avec l'ID : " + userId));
+                .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
     }
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
+    // ------------------- SAVE -------------------
     public User save(User user) {
         return userRepository.save(user);
     }
-      /*  @Transactional
-        public void deleteUser(Long userId) {
-            // Supprimer l'utilisateur
-            userRepository.deleteById(userId);
-        }*/
+
+    // ------------------- DELETE -------------------
     @Transactional
     public void deleteUser(Long userId) {
-    User   User= getUserById(userId);
-        switch (User.getType().toLowerCase()) {
+        User user = getUserById(userId);
+
+        switch (user.getType().toLowerCase()) {
             case "admin":
                 if (adminRepository.existsById(userId)) {
                     adminRepository.deleteById(userId);
                 } else {
-                    throw new EntityNotFoundException("Aucun admin avec l'id " + userId + " n'existe!");
+                    throw new EntityNotFoundException("Admin not found with id: " + userId);
                 }
                 break;
-            case "vendeur":
-                if (vendeurRepository.existsById(userId)) {
-                    vendeurRepository.deleteById(userId);
+
+            case "enseignant":
+                if (enseignantRepository.existsById(userId)) {
+                    enseignantRepository.deleteById(userId);
                 } else {
-                    throw new EntityNotFoundException("Aucun vendeur avec l'id " + userId + " n'existe!");
+                    throw new EntityNotFoundException("Enseignant not found with id: " + userId);
                 }
                 break;
+
+            case "etudiant":
+                if (etudiantRepository.existsById(userId)) {
+                    etudiantRepository.deleteById(userId);
+                } else {
+                    throw new EntityNotFoundException("Etudiant not found with id: " + userId);
+                }
+                break;
+
             default:
                 if (userRepository.existsById(userId)) {
                     userRepository.deleteById(userId);
                 } else {
-                    throw new EntityNotFoundException("Aucun utilisateur avec l'id " + userId + " n'existe!");
+                    throw new EntityNotFoundException("User not found with id: " + userId);
                 }
                 break;
         }
     }
+
+    // ------------------- UPDATE -------------------
+    @Transactional
     public void update(User updatedUser) {
         userRepository.findById(updatedUser.getId()).ifPresent(existingUser -> {
             existingUser.setType(updatedUser.getType());
@@ -106,68 +111,42 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             existingUser.setLongitude(updatedUser.getLongitude());
             existingUser.setLatitude(updatedUser.getLatitude());
 
-            // Update the photo only if a new photo is provided
-            if (updatedUser.getPhoto() != null && updatedUser.getPhoto().length() > 0) {
+            if (updatedUser.getPhoto() != null && !updatedUser.getPhoto().isEmpty()) {
                 existingUser.setPhoto(updatedUser.getPhoto());
             }
 
-            // Save the updated user
             userRepository.save(existingUser);
         });
     }
-    public Long findUserIdByNom(String nom) {
-        User user = userRepository.findByNom(nom);
-        if (user == null) {
-            throw new UsernameNotFoundException("Utilisateur non trouvé avec le nom : " + nom);
-        }
-        return user.getId();
-    }
-    public boolean isEmailUnique(String email) {
-        // Vérifiez si l'e-mail existe déjà dans la base de données
-        User user = userRepository.findByEmail(email);
 
-        return user == null; // Si l'utilisateur est null, l'e-mail est unique
+    // ------------------- EMAIL & NAME UTILS -------------------
+    public boolean isEmailUnique(String email) {
+        return userRepository.findByEmail(email) == null;
     }
+
     public Long getUserIdByName(String nom) {
         User user = userRepository.findByNom(nom);
+        if (user == null) throw new UsernameNotFoundException("User not found with name: " + nom);
         return user.getId();
     }
-    @Transactional
-    public User updateUserType(Long userId) {
-        // Vérifiez si userId est null
-        if (userId == null) {
-            throw new IllegalArgumentException("User ID cannot be null");
-        }
 
-        // Recherchez l'utilisateur par son ID
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
-
-        // Mettez à jour le type de l'utilisateur
-        user.setType("vendeur");
-
-        // Enregistrez les modifications de l'utilisateur dans la base de données
-        return userRepository.save(user);
-    }
-
-    @Transactional
-    public User updateVendeurType(Long userId) {
-        // Vérifiez si userId est null
-        if (userId == null) {
-            throw new IllegalArgumentException("User ID cannot be null");
-        }
-
-        // Recherchez l'utilisateur par son ID
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Vendeur not found with id: " + userId));
-
-        // Mettez à jour le type de l'utilisateur
-        user.setType("user");
-
-        // Enregistrez les modifications de l'utilisateur dans la base de données
-        return userRepository.save(user);
-    }
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email);
     }
+
+    // ------------------- TYPE UPDATE -------------------
+    @Transactional
+    public User updateUserType(Long userId, String newType) {
+        User user = getUserById(userId);
+        user.setType(newType.toLowerCase());
+        return userRepository.save(user);
+    }
+    public Long findUserIdByNom(String nom) {
+        User user = userRepository.findByNom(nom); // Find user by name
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found with name: " + nom);
+        }
+        return user.getId(); // Return the ID of the user
+    }
+
 }

@@ -1,9 +1,7 @@
 package com.springjwt.controllers;
 
-import com.springjwt.models.Admin;
+import com.springjwt.models.*;
 //import com.springjwt.models.ConfirmationToken;
-import com.springjwt.models.User;
-import com.springjwt.models.Vendeur;
 import com.springjwt.payload.request.LoginRequest;
 import com.springjwt.payload.request.SignupRequest;
 import com.springjwt.payload.response.JwtResponse;
@@ -11,7 +9,6 @@ import com.springjwt.payload.response.MessageResponse;
 import com.springjwt.repository.AdminRepository;
 //import com.springjwt.repository.ConfirmationTokenRepository;
 import com.springjwt.repository.UserRepository;
-import com.springjwt.repository.VendeurRepository;
 import com.springjwt.security.jwt.JwtUtils;
 import com.springjwt.security.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +23,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import javax.transaction.Transactional;
@@ -35,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:4200")
 @RequestMapping("/")
 public class AuthController {
 
@@ -49,7 +47,10 @@ public class AuthController {
     AdminRepository adminRepository;
 
     @Autowired
-    VendeurRepository vendeurRepository;
+    EnseignantService enseignantService;
+    @Autowired
+
+    SalleService salleService;
 
     @Autowired
     PasswordEncoder encoder;
@@ -59,9 +60,8 @@ public class AuthController {
 
     @Autowired
     private AdminService adminService;
-
     @Autowired
-    private VendeurService vendeurService;
+    EtudiantService etudiantService;
 
     @Autowired
     private UserDetailsServiceImpl userService;
@@ -108,11 +108,7 @@ public class AuthController {
         return userService.getUserById(userId);
     }
 
-    @GetMapping("/vendeurs")
-    public ResponseEntity<?> getAllVendeurs() {
-        List<Vendeur> vendeurs = vendeurService.getAll();
-        return ResponseEntity.ok(vendeurs);
-    }
+
     @PostMapping("/checkEmailUnique")
     public ResponseEntity<?> checkEmailUnique(@RequestBody String email) {
         try {
@@ -151,54 +147,70 @@ public class AuthController {
 
             User newUser;
             String type = signUpRequest.getType().toLowerCase();
-            User user = null;
-            if (type.startsWith("admin")) {
+
+            if (type.equals("admin")) {
                 Admin admin = new Admin();
                 admin.setNom(signUpRequest.getNom());
                 admin.setPrenom(signUpRequest.getPrenom());
                 admin.setEmail(signUpRequest.getEmail());
                 admin.setTel(signUpRequest.getTel());
-                admin.setType(signUpRequest.getType());
+                admin.setType("admin");
                 admin.setCin(signUpRequest.getCin());
                 admin.setPhoto(signUpRequest.getPhoto());
                 admin.setPassword(encoder.encode(signUpRequest.getPassword()));
                 newUser = admin;
                 adminService.save(admin);
 
-            } else  {
-                Vendeur vendeur = new Vendeur();
-                vendeur.setNom(signUpRequest.getNom());
-                vendeur.setPrenom(signUpRequest.getPrenom());
-                vendeur.setEmail(signUpRequest.getEmail());
-                vendeur.setTel(signUpRequest.getTel());
-                vendeur.setType("user");
-                vendeur.setCin(signUpRequest.getCin());
-                vendeur.setPhoto(signUpRequest.getPhoto());
-                vendeur.setPassword(encoder.encode(signUpRequest.getPassword()));
-                newUser = vendeur;
-                vendeurService.save(vendeur);
+            } else if (type.equals("enseignant")) {
+                Enseignant enseignant = new Enseignant();
+                enseignant.setNom(signUpRequest.getNom());
+                enseignant.setPrenom(signUpRequest.getPrenom());
+                enseignant.setEmail(signUpRequest.getEmail());
+                enseignant.setTel(signUpRequest.getTel());
+                enseignant.setType("enseignant");
+                enseignant.setCin(signUpRequest.getCin());
+                enseignant.setPhoto(signUpRequest.getPhoto());
+                enseignant.setPassword(encoder.encode(signUpRequest.getPassword()));
+                newUser = enseignant;
+                enseignantService.save(enseignant);
+
+            } else if (type.equals("etudiant")) {
+                Etudiant etudiant = new Etudiant();
+                etudiant.setNom(signUpRequest.getNom());
+                etudiant.setPrenom(signUpRequest.getPrenom());
+                etudiant.setEmail(signUpRequest.getEmail());
+                etudiant.setTel(signUpRequest.getTel());
+                etudiant.setType("etudiant");
+                etudiant.setCin(signUpRequest.getCin());
+                etudiant.setPhoto(signUpRequest.getPhoto());
+                etudiant.setPassword(encoder.encode(signUpRequest.getPassword()));
+                newUser = etudiant;
+                etudiantService.save(etudiant);
+
+            } else {
+                return ResponseEntity
+                        .badRequest()
+                        .body(new MessageResponse("Error: Type must be admin, enseignant, or etudiant!"));
             }
+
+            // Authenticate and generate JWT
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(signUpRequest.getEmail(), signUpRequest.getPassword()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtUtils.generateJwtToken(authentication);
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-            // Créer une réponse contenant le token JWT et l'identifiant de l'utilisateur
-            JwtResponse jwtResponse = new JwtResponse(jwt, userDetails.getId(), userDetails.getPassword(), userDetails.getEmail(), userDetails.getType());
+            JwtResponse jwtResponse = new JwtResponse(jwt, userDetails.getId(), userDetails.getPassword(),
+                    userDetails.getEmail(), userDetails.getType());
 
-            // Retourner la réponse avec le code de statut OK
             return ResponseEntity.ok(jwtResponse);
+
         } catch (DataIntegrityViolationException e) {
-            // Gérer les erreurs de violation d'intégrité des données (par exemple, e-mail déjà utilisé)
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(new MessageResponse("Error: Data integrity violation."));
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new MessageResponse("Error: Data integrity violation."));
         }
     }
-    @GetMapping("/photo/{nom}")
-    public ResponseEntity<User> getUserByPhotoName(@PathVariable String nom) {
-        User user = userService.findPhotoByNo(nom);
-        return ResponseEntity.ok(user);
-    }
+
     @GetMapping("/getUserByEmail/{email}")
     public ResponseEntity<User> getUserByEmail(@PathVariable String email) {
         User user = userService.getUserByEmail(email);
@@ -209,13 +221,10 @@ public class AuthController {
         }
     }
     @PutMapping("/users/updateType/{userId}")
-    public ResponseEntity<?> updateUserType(@PathVariable Long userId) {
-        User updatedUser = userService.updateUserType(userId);
-        return ResponseEntity.ok(updatedUser);
-    }
-    @PutMapping("/users/updatevendeurType/{userId}")
-    public ResponseEntity<?> updateVendeurType(@PathVariable Long userId) {
-        User updatedUser = userService.updateVendeurType(userId);
+    public ResponseEntity<?> updateUserType(
+            @PathVariable Long userId,
+            @RequestParam String newType) {  // <-- get new type from request
+        User updatedUser = userService.updateUserType(userId, newType);
         return ResponseEntity.ok(updatedUser);
     }
 
@@ -245,24 +254,24 @@ public class AuthController {
             admin.setPassword(encoder.encode(signUpRequest.getPassword()));
             updatedUser = admin;
             adminService.update((Admin) updatedUser);
-        } else if (signUpRequest.getType().toLowerCase().startsWith("vendeur")) {
-            Vendeur vendeur = new Vendeur();
-            vendeur.setId(userId);
-            vendeur.setNom(signUpRequest.getNom());
-            vendeur.setPrenom(signUpRequest.getPrenom());
-            vendeur.setEmail(signUpRequest.getEmail());
-            vendeur.setTel(signUpRequest.getTel());
-            vendeur.setType(signUpRequest.getType());
-            vendeur.setCin(signUpRequest.getCin());
-            vendeur.setLongitude(signUpRequest.getLongitude());
-            vendeur.setLatitude(signUpRequest.getLatitude());
-            vendeur.setVille(signUpRequest.getVille());
-            vendeur.setPays(signUpRequest.getPays());
-            vendeur.setCodePostal(signUpRequest.getCodePostal());
-            vendeur.setPhoto(signUpRequest.getPhoto());
-            vendeur.setPassword(encoder.encode(signUpRequest.getPassword()));
-            updatedUser = vendeur;
-            vendeurService.update((Vendeur) updatedUser);
+        } else if (signUpRequest.getType().toLowerCase().startsWith("enseignant")) {
+            Enseignant enseignant = new Enseignant();
+            enseignant.setId(userId);
+            enseignant.setNom(signUpRequest.getNom());
+            enseignant.setPrenom(signUpRequest.getPrenom());
+            enseignant.setEmail(signUpRequest.getEmail());
+            enseignant.setTel(signUpRequest.getTel());
+            enseignant.setType(signUpRequest.getType());
+            enseignant.setCin(signUpRequest.getCin());
+            enseignant.setLongitude(signUpRequest.getLongitude());
+            enseignant.setLatitude(signUpRequest.getLatitude());
+            enseignant.setVille(signUpRequest.getVille());
+            enseignant.setPays(signUpRequest.getPays());
+            enseignant.setCodePostal(signUpRequest.getCodePostal());
+            enseignant.setPhoto(signUpRequest.getPhoto());
+            enseignant.setPassword(encoder.encode(signUpRequest.getPassword()));
+            updatedUser = enseignant;
+            enseignantService.updateEnseignant((Enseignant) updatedUser);
         } else {
             User user = new User();
             user.setId(userId);
@@ -270,7 +279,7 @@ public class AuthController {
             user.setPrenom(signUpRequest.getPrenom());
             user.setEmail(signUpRequest.getEmail());
             user.setTel(signUpRequest.getTel());
-            user.setType(("user"));
+            user.setType(("etudiant"));
             user.setCin(signUpRequest.getCin());
             user.setLongitude(signUpRequest.getLongitude());
             user.setLatitude(signUpRequest.getLatitude());
@@ -312,27 +321,9 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("Admin deleted successfully."));
     }
 
-    @DeleteMapping("/deleteVendeur/{vendeurId}")
-    public ResponseEntity<?> deleteVendeur(@PathVariable Long vendeurId) {
-        if (!vendeurRepository.existsById(vendeurId)) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(new MessageResponse("Error: Vendeur not found with id " + vendeurId));
-        }
-
-        vendeurService.deletevendeur(vendeurId);
-        return ResponseEntity.ok(new MessageResponse("Vendeur deleted successfully."));
-    }
 
 
-    @GetMapping("/getVendeurById/{vendeurId}")
-    public ResponseEntity<?> getVendeurById(@PathVariable Long vendeurId) {
-        Vendeur vendeur = vendeurService.getById(vendeurId);
-        if (vendeur == null) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Vendeur not found with id " + vendeurId));
-        }
-        return ResponseEntity.ok(vendeur);
-    }
+
 
     @GetMapping("/admins")
     public ResponseEntity<?> getAllAdmins() {
@@ -348,27 +339,8 @@ public class AuthController {
         }
         return ResponseEntity.ok(admin);
     }
-    @PostMapping("/addVendeur")
-    public ResponseEntity<Vendeur> addVendeur(@RequestBody Vendeur vendeur) {
-        Vendeur savedVendeur = vendeurService.save(vendeur);
-        if (savedVendeur != null) {
-            return new ResponseEntity<>(savedVendeur, HttpStatus.CREATED);
-        } else {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
-    }
-    @PostMapping("/admin/vendeur-request")
-    public ResponseEntity<String> sendVendeurRequestToAdmin(@RequestBody Vendeur vendeur) {
-        try {
-            // Process the vendeur request (e.g., save to database)
-            vendeurService.processVendeurRequest(vendeur);
-            return ResponseEntity.ok("Vendeur request received successfully.");
-        } catch (Exception e) {
-            // Handle any errors that may occur
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error processing vendeur request: " + e.getMessage());
-        }
-    }
+
+
 
     @GetMapping("/getUserIdByName/{nom}")
     public ResponseEntity<Map<String, Object>> getUserIdByName(@PathVariable String nom) {
@@ -389,27 +361,93 @@ public class AuthController {
     }
 
 
-    @GetMapping("/admin/vendeur-requests")
-    public ResponseEntity<List<Vendeur>> getAllVendeurRequests() {
-        try {
-            List<Vendeur> vendeurRequests = vendeurService.getAllVendeurRequests();
-            return ResponseEntity.ok(vendeurRequests);
-        } catch (Exception e) {
-            // Handle any errors that may occur
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(null);
-        }
-    }
-    @PutMapping("/updateVendeur/{vendeurId}")
-    public ResponseEntity<Vendeur> updateVendeur(@RequestBody Vendeur updatedVendeur) {
-        Vendeur vendeur = vendeurService.update(updatedVendeur);
-        if (vendeur != null) {
-            return new ResponseEntity<>(vendeur, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+
+    @PutMapping("/admin/update")
+    public ResponseEntity<Admin> updateAdmin(@RequestBody Admin admin) {
+        return ResponseEntity.ok(adminService.update(admin));
     }
 
+
+    @PostMapping("/enseignant")
+    public ResponseEntity<Enseignant> registerEnseignant(@RequestBody Enseignant e) {
+        return ResponseEntity.ok(adminService.saveEnseignant(e));
+    }
+
+    @GetMapping("/enseignant")
+    public ResponseEntity<List<Enseignant>> getAllEnseignants() {
+        return ResponseEntity.ok(adminService.getAllEnseignants());
+    }
+
+    @PutMapping("/enseignant/update")
+    public ResponseEntity<Enseignant> updateEnseignant(@RequestBody Enseignant e) {
+        return ResponseEntity.ok(adminService.updateEnseignant(e));
+    }
+
+
+
+    @GetMapping("/etudiant")
+    public ResponseEntity<List<Etudiant>> getAllEtudiants() {
+        return ResponseEntity.ok(etudiantService.getAll());
+    }
+
+    @PutMapping("/etudiant/update")
+    public ResponseEntity<Etudiant> updateEtudiant(@RequestBody Etudiant e) {
+        return ResponseEntity.ok(etudiantService.update(e));
+    }
+
+    @DeleteMapping("/etudiant/delete/{id}")
+    public ResponseEntity<Void> deleteEtudiant(@PathVariable Long id) {
+        etudiantService.deleteEtudiant(id);
+        return ResponseEntity.ok().build();
+    }
+    @PostMapping("/etudiant/save")
+    public ResponseEntity<Etudiant> saveEtudiant(@RequestBody Etudiant e) {
+        Etudiant savedEtudiant = etudiantService.save(e);
+        return ResponseEntity.ok(savedEtudiant);
+    }
+
+    @GetMapping("/etudiant/{id}")
+    public ResponseEntity<Etudiant> getEtudiantById(@PathVariable Long id) {
+        Etudiant etudiant = etudiantService.getById(id);
+        if (etudiant != null) {
+            return ResponseEntity.ok(etudiant);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+        return errors;
+    }
+
+// ----------------- CLASSROOMS (Salles) ENDPOINTS -----------------
+    @PostMapping("/salle")
+    public ResponseEntity<Salle> saveSalle(@RequestBody Salle s) {
+        return ResponseEntity.ok(salleService.saveSalle(s));
+    }
+
+    @GetMapping("/salle")
+    public ResponseEntity<List<Salle>> getAllSalles() {
+        return ResponseEntity.ok(salleService.getAllSalles());
+    }
+
+    @PutMapping("/salle/update")
+    public ResponseEntity<Salle> updateSalle(@RequestBody Salle s) {
+        return ResponseEntity.ok(salleService.updateSalle(s));
+    }
+
+    @DeleteMapping("/salle/delete/{id}")
+    public ResponseEntity<Void> deleteSalle(@PathVariable Long id) {
+        salleService.deleteSalle(id);
+        return ResponseEntity.ok().build();
+    }
 
 
 

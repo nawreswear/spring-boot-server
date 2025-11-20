@@ -1,17 +1,14 @@
 package com.springjwt.security.services;
 
-import com.springjwt.models.Vendeur;
-
+import com.springjwt.models.Etudiant;
 import java.util.List;
 
-
-public interface VendeurService {
-
-    Vendeur save(Vendeur v);
-    List<Vendeur> getAll();
-    Vendeur update(Vendeur updatedVendeur);
-    void deletevendeur(Long id);
-    Vendeur getById(Long id);
-    void processVendeurRequest(Vendeur vendeur);
-    List<Vendeur> getAllVendeurRequests();
+public interface EtudiantService {
+    Etudiant save(Etudiant e);
+    List<Etudiant> getAll();
+    Etudiant update(Etudiant updatedEtudiant);
+    void deleteEtudiant(Long id);
+    Etudiant getById(Long id);
+    void processEtudiantRequest(Etudiant etudiant);
+    List<Etudiant> getAllEtudiantRequests();
 }
