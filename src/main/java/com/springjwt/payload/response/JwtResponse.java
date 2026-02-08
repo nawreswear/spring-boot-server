@@ -8,14 +8,14 @@ import lombok.Setter;
 public class JwtResponse {
     private String token;
     private String type;
-    private Long id;
-    private String password;
+    private Integer id;
     private String email;
+    private String username;
 
-    public JwtResponse(String accessToken, Long id, String password, String email, String type) {
-        this.token = accessToken;
+    public JwtResponse(String token, Integer id, String username, String email, String type) {
+        this.token = token;
         this.id = id;
-        this.password = password;
+        this.username = username;
         this.email = email;
         this.type = type;
     }
@@ -29,12 +29,6 @@ public class JwtResponse {
     }
 
     public String getTokenType() {
-        return type;
+        return "Bearer";
     }
-
-    public void setTokenType(String tokenType) {
-        this.type = tokenType;
-    }
-
-
 }

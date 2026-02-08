@@ -12,61 +12,61 @@ import com.springjwt.models.User;
 import lombok.Getter;
 import lombok.Setter;
 
-
 @Getter
 @Setter
 public class UserDetailsImpl implements UserDetails {
     private static final long serialVersionUID = 1L;
-    private User user;
-    private Long id;
-
+    
+    private Integer id;
     private String nom;
-
     private String prenom;
-    @Getter
     private String type;
-    private int Tel;
-
+    private String telephone;
     private String email;
-    @Getter
-    String photo;
-    private String password;
+    private String photo;
+    private String motdepasse;
+    private String ville;
     private Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetailsImpl(Long id, String nom, String prenom,String type, int Tel, String email, String photo,String password, Collection<? extends GrantedAuthority> authorities) {
+    public UserDetailsImpl(Integer id, String nom, String prenom, String type, String telephone, 
+                        String email, String ville, String photo, String motdepasse, 
+                        Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.nom = nom;
         this.prenom = prenom;
-        this.type=type;
-        this.Tel = Tel;
+        this.type = type;
+        this.telephone = telephone;
         this.email = email;
-        this.password = password;
-        this.photo=photo;
+        this.ville = ville;
+        this.photo = photo;
+        this.motdepasse = motdepasse;
         this.authorities = authorities;
     }
 
-    public static UserDetailsImpl build(String type, User user) {
+    public static UserDetailsImpl build(User user) {
         return new UserDetailsImpl(
                 user.getId(),
                 user.getNom(),
                 user.getPrenom(),
                 user.getType(),
-                user.getTel(),
+                user.getTelephone(),
                 user.getEmail(),
+                user.getVille(),
                 user.getPhoto(),
-                user.getPassword(),
+                user.getMotdepasse(),
                 Collections.emptyList()
         );
     }
-
-
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;
     }
 
-
+    @Override
+    public String getPassword() {
+        return motdepasse;
+    }
 
     @Override
     public boolean isAccountNonExpired() {
@@ -87,6 +87,7 @@ public class UserDetailsImpl implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+    
     @Override
     public boolean equals(Object o) {
         if (this == o)
@@ -98,10 +99,12 @@ public class UserDetailsImpl implements UserDetails {
     }
 
     @Override
-    public String getUsername() {
-        return nom;
+    public int hashCode() {
+        return Objects.hash(id);
     }
 
-
-
+    @Override
+    public String getUsername() {
+        return nom + " " + prenom; // Return full name as username
+    }
 }

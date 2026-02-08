@@ -3,6 +3,7 @@ package com.springjwt.security.services;
 import com.springjwt.models.*;
 import com.springjwt.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import javax.transaction.Transactional;
 import java.util.List;
@@ -12,52 +13,97 @@ import java.util.List;
 public class AdminServiceImpl implements AdminService {
 
     @Autowired
-    private AdminRepository adminRepo;
+    private AdministrateurRepository administrateurRepo;
     @Autowired
-    private EnseignantRepository enseignantRepo;
+    private UserRepository userRepository;
     @Autowired
-    private EtudiantRepository etudiantRepo;
+    private ClientRepository clientRepository;
     @Autowired
-    private SalleRepository salleRepo;
+    private AgentAdministratifRepository agentAdministratifRepository;
+    @Autowired
+    private OperateurRepository operateurRepository;
 
-    // --- Users ---
+    // --- Administrateur CRUD ---
     @Override
-    public Admin save(Admin admin) { return adminRepo.save(admin); }
+    public Administrateur save(Administrateur administrateur) { 
+        return administrateurRepo.save(administrateur); 
+    }
+    
     @Override
-    public List<Admin> getAll() { return adminRepo.findAll(); }
+    public List<Administrateur> getAll() { 
+        return administrateurRepo.findAll(); 
+    }
+    
     @Override
-    public void deleteAdmin(Long id) { adminRepo.deleteById(id); }
-    @Override
-    public Admin update(Admin admin) { return adminRepo.save(admin); }
-    @Override
-    public Admin getById(Long id) { return adminRepo.findById(id).orElse(null); }
+    public void deleteAdmin(Integer id) { 
+        administrateurRepo.deleteById(id); 
+    }
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Override
-    public Enseignant saveEnseignant(Enseignant e) { return enseignantRepo.save(e); }
-    @Override
-    public List<Enseignant> getAllEnseignants() { return enseignantRepo.findAll(); }
-    @Override
-    public void deleteEnseignant(Long id) { enseignantRepo.deleteById(id); }
-    @Override
-    public Enseignant updateEnseignant(Enseignant e) { return enseignantRepo.save(e); }
+    public Administrateur update(Administrateur administrateur) {
+
+        Administrateur existing = administrateurRepo.findById(administrateur.getId())
+                .orElseThrow(() -> new RuntimeException("Administrateur non trouvé"));
+
+        existing.setNom(administrateur.getNom());
+        existing.setPrenom(administrateur.getPrenom());
+        existing.setEmail(administrateur.getEmail());
+        existing.setTelephone(administrateur.getTelephone());
+        existing.setVille(administrateur.getVille());
+        existing.setPhoto(administrateur.getPhoto());
+        existing.setType(administrateur.getType());
+
+        // 🔐 ENCODAGE DU MOT DE PASSE
+        if (administrateur.getMotdepasse() != null
+                && !administrateur.getMotdepasse().isEmpty()
+                && !passwordEncoder.matches(administrateur.getMotdepasse(), existing.getMotdepasse())) {
+
+            existing.setMotdepasse(passwordEncoder.encode(administrateur.getMotdepasse()));
+        }
+
+        return administrateurRepo.save(existing);
+    }
+
 
     @Override
-    public Etudiant saveEtudiant(Etudiant e) { return etudiantRepo.save(e); }
-    @Override
-    public List<Etudiant> getAllEtudiants() { return etudiantRepo.findAll(); }
-    @Override
-    public void deleteEtudiant(Long id) { etudiantRepo.deleteById(id); }
-    @Override
-    public Etudiant updateEtudiant(Etudiant e) { return etudiantRepo.save(e); }
+    public Administrateur getById(Integer id) { 
+        return administrateurRepo.findById(id).orElse(null); 
+    }
 
-
-    // --- Salles ---
+    // --- User Management ---
     @Override
-    public Salle saveSalle(Salle s) { return salleRepo.save(s); }
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+    
     @Override
-    public List<Salle> getAllSalles() { return salleRepo.findAll(); }
+    public User getUserById(Integer id) {
+        return userRepository.findById(id).orElse(null);
+    }
+    
     @Override
-    public void deleteSalle(Long id) { salleRepo.deleteById(id); }
+    public void deleteUser(Integer id) {
+        userRepository.deleteById(id);
+    }
+    
+    // --- System Configuration ---
     @Override
-    public Salle updateSalle(Salle s) { return salleRepo.save(s); }
+    public void configureSystem() {
+        // Implementation for system configuration
+    }
+    
+    // --- Comment Management ---
+    @Override
+    public void manageComments() {
+        // Implementation for comment management
+    }
+    
+    // --- Responsibility Display ---
+    @Override
+    public String displayResponsibilities() {
+        return "Administrateur responsibilities: User management, System configuration, Comment management";
+    }
 }

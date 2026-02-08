@@ -3,7 +3,6 @@ package com.springjwt.payload.request;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.persistence.Column;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
@@ -12,23 +11,24 @@ import javax.validation.constraints.Size;
 @Setter
 public class LoginRequest {
 
-    @Size(max = 50)
+    @Size(max = 100)
     @Email
     @NotBlank
-    @Column(unique = true)
     private String email;
 
     @NotBlank
-    private String password;
-    private String type;
+    @Size(max = 255)
+    private String motdepasse;
+    
+    private String userType;
 
-    public LoginRequest(@NotBlank String email, @NotBlank String password,String type) {
+    public LoginRequest(@NotBlank String email, @NotBlank String motdepasse, String userType) {
         super();
         this.email = email;
-        this.password = password;
-        this.type=type;
+        this.motdepasse = motdepasse;
+        this.userType = userType;
     }
 
-
-
+    public LoginRequest() {
+    }
 }

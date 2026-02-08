@@ -1,19 +1,15 @@
 package com.springjwt.controllers;
-
 import com.springjwt.models.*;
-//import com.springjwt.models.ConfirmationToken;
 import com.springjwt.payload.request.LoginRequest;
 import com.springjwt.payload.request.SignupRequest;
 import com.springjwt.payload.response.JwtResponse;
 import com.springjwt.payload.response.MessageResponse;
-import com.springjwt.repository.AdminRepository;
-//import com.springjwt.repository.ConfirmationTokenRepository;
+import com.springjwt.repository.AdministrateurRepository;
 import com.springjwt.repository.UserRepository;
 import com.springjwt.security.jwt.JwtUtils;
 import com.springjwt.security.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -44,13 +40,16 @@ public class AuthController {
     UserRepository userRepository;
 
     @Autowired
-    AdminRepository adminRepository;
+    AdministrateurRepository administrateurRepository;
 
     @Autowired
-    EnseignantService enseignantService;
-    @Autowired
+    ClientService clientService;
 
-    SalleService salleService;
+    @Autowired
+    AgentAdministratifService agentAdministratifService;
+
+    @Autowired
+    OperateurService operateurService;
 
     @Autowired
     PasswordEncoder encoder;
@@ -60,19 +59,16 @@ public class AuthController {
 
     @Autowired
     private AdminService adminService;
-    @Autowired
-    EtudiantService etudiantService;
 
     @Autowired
     private UserDetailsServiceImpl userService;
-
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         try {
             // Votre logique d'authentification
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getMotdepasse()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtUtils.generateJwtToken(authentication);
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
@@ -90,52 +86,6 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/users")
-    public ResponseEntity<?> getAllUsers() {
-        List<User> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
-    }
-
-    @PostMapping("/addUser")
-    public ResponseEntity<User> addUser(@RequestBody User user) {
-        User createdUser = userService.save(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
-    }
-
-    @GetMapping("/getUserById/{userId}")
-    public User getUserById(@PathVariable Long userId) {
-
-        return userService.getUserById(userId);
-    }
-
-
-    @PostMapping("/checkEmailUnique")
-    public ResponseEntity<?> checkEmailUnique(@RequestBody String email) {
-        try {
-            // Vérifiez si l'e-mail est unique en appelant le service approprié
-            boolean isUnique = userService.isEmailUnique(email);
-            if (isUnique) {
-                return ResponseEntity.ok("Email is unique.");
-            } else {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email is already in use!");
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error.");
-        }
-    }
-    @GetMapping("/api/{nomuser}")
-    public ResponseEntity<Object> findUserIdByNom(@PathVariable String nomuser) {
-        try {
-            Long userId = userService.findUserIdByNom(nomuser);
-            return ResponseEntity.ok(userId);
-        } catch (UsernameNotFoundException e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utilisateur non trouvé avec le nom : " + nomuser);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Une erreur s'est produite lors de la recherche de l'utilisateur.");
-        }
-    }
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         try {
@@ -146,61 +96,101 @@ public class AuthController {
             }
 
             User newUser;
-            String type = signUpRequest.getType().toLowerCase();
+            String userType = signUpRequest.getUserType();
 
-            if (type.equals("admin")) {
-                Admin admin = new Admin();
-                admin.setNom(signUpRequest.getNom());
-                admin.setPrenom(signUpRequest.getPrenom());
-                admin.setEmail(signUpRequest.getEmail());
-                admin.setTel(signUpRequest.getTel());
-                admin.setType("admin");
-                admin.setCin(signUpRequest.getCin());
-                admin.setPhoto(signUpRequest.getPhoto());
-                admin.setPassword(encoder.encode(signUpRequest.getPassword()));
-                newUser = admin;
-                adminService.save(admin);
+            if ("administrateur".equalsIgnoreCase(userType)) {
+                Administrateur administrateur = new Administrateur();
+                administrateur.setNom(signUpRequest.getNom());
+                administrateur.setPrenom(signUpRequest.getPrenom());
+                administrateur.setEmail(signUpRequest.getEmail());
+                administrateur.setTelephone(signUpRequest.getTelephone());
+                administrateur.setVille(signUpRequest.getVille());
+                administrateur.setMotdepasse(encoder.encode(signUpRequest.getMotdepasse()));
+                administrateur.setPhoto(signUpRequest.getPhoto());
+                administrateur.setType("administrateur");
+                newUser = administrateur;
+                adminService.save(administrateur);
 
-            } else if (type.equals("enseignant")) {
-                Enseignant enseignant = new Enseignant();
-                enseignant.setNom(signUpRequest.getNom());
-                enseignant.setPrenom(signUpRequest.getPrenom());
-                enseignant.setEmail(signUpRequest.getEmail());
-                enseignant.setTel(signUpRequest.getTel());
-                enseignant.setType("enseignant");
-                enseignant.setCin(signUpRequest.getCin());
-                enseignant.setPhoto(signUpRequest.getPhoto());
-                enseignant.setPassword(encoder.encode(signUpRequest.getPassword()));
-                newUser = enseignant;
-                enseignantService.save(enseignant);
+            } else if ("client".equalsIgnoreCase(userType)) {
+                Client client = new Client();
+                client.setNom(signUpRequest.getNom());
+                client.setPrenom(signUpRequest.getPrenom());
+                client.setEmail(signUpRequest.getEmail());
+                client.setTelephone(signUpRequest.getTelephone());
+                client.setVille(signUpRequest.getVille());
+                client.setMotdepasse(encoder.encode(signUpRequest.getMotdepasse()));
+                client.setPhoto(signUpRequest.getPhoto());
+                client.setType("client");
+                
+                // Set client-specific fields
+                if (signUpRequest.getAdresse() != null) {
+                    client.setAdresse(signUpRequest.getAdresse());
+                }
+                if (signUpRequest.getMatriculeFiscale() != null) {
+                    client.setMatriculeFiscale(signUpRequest.getMatriculeFiscale());
+                }
+                if (signUpRequest.getTypeClient() != null) {
+                    client.setTypeClient(TypeClient.valueOf(signUpRequest.getTypeClient().toUpperCase()));
+                }
+                
+                newUser = client;
+                clientService.save(client);
 
-            } else if (type.equals("etudiant")) {
-                Etudiant etudiant = new Etudiant();
-                etudiant.setNom(signUpRequest.getNom());
-                etudiant.setPrenom(signUpRequest.getPrenom());
-                etudiant.setEmail(signUpRequest.getEmail());
-                etudiant.setTel(signUpRequest.getTel());
-                etudiant.setType("etudiant");
-                etudiant.setCin(signUpRequest.getCin());
-                etudiant.setPhoto(signUpRequest.getPhoto());
-                etudiant.setPassword(encoder.encode(signUpRequest.getPassword()));
-                newUser = etudiant;
-                etudiantService.save(etudiant);
+            } else if ("agentadministratif".equalsIgnoreCase(userType)) {
+                AgentAdministratif agent = new AgentAdministratif();
+                agent.setNom(signUpRequest.getNom());
+                agent.setPrenom(signUpRequest.getPrenom());
+                agent.setEmail(signUpRequest.getEmail());
+                agent.setTelephone(signUpRequest.getTelephone());
+                agent.setVille(signUpRequest.getVille());
+                agent.setMotdepasse(encoder.encode(signUpRequest.getMotdepasse()));
+                agent.setPhoto(signUpRequest.getPhoto());
+                agent.setType("agentadministratif");
+                
+                // Set agent-specific fields
+                if (signUpRequest.getStatut() != null) {
+                    agent.setStatut(signUpRequest.getStatut());
+                }
+                if (signUpRequest.getChargeTravail() != null) {
+                    agent.setChargeTravail(signUpRequest.getChargeTravail());
+                }
+                
+                newUser = agent;
+                agentAdministratifService.save(agent);
+
+            } else if ("operateur".equalsIgnoreCase(userType)) {
+                Operateur operateur = new Operateur();
+                operateur.setNom(signUpRequest.getNom());
+                operateur.setPrenom(signUpRequest.getPrenom());
+                operateur.setEmail(signUpRequest.getEmail());
+                operateur.setTelephone(signUpRequest.getTelephone());
+                operateur.setVille(signUpRequest.getVille());
+                operateur.setMotdepasse(encoder.encode(signUpRequest.getMotdepasse()));
+                operateur.setPhoto(signUpRequest.getPhoto());
+                operateur.setType("operateur");
+                
+                // Set operateur-specific fields
+                if (signUpRequest.getTypeOperation() != null) {
+                    operateur.setTypeOperation(TypeOperation.valueOf(signUpRequest.getTypeOperation().toUpperCase()));
+                }
+                
+                newUser = operateur;
+                operateurService.save(operateur);
 
             } else {
                 return ResponseEntity
                         .badRequest()
-                        .body(new MessageResponse("Error: Type must be admin, enseignant, or etudiant!"));
+                        .body(new MessageResponse("Error: Type must be administrateur, client, agentadministratif, or operateur!"));
             }
 
             // Authenticate and generate JWT
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(signUpRequest.getEmail(), signUpRequest.getPassword()));
+                    new UsernamePasswordAuthenticationToken(signUpRequest.getEmail(), signUpRequest.getMotdepasse()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtUtils.generateJwtToken(authentication);
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-            JwtResponse jwtResponse = new JwtResponse(jwt, userDetails.getId(), userDetails.getPassword(),
+            JwtResponse jwtResponse = new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(),
                     userDetails.getEmail(), userDetails.getType());
 
             return ResponseEntity.ok(jwtResponse);
@@ -209,6 +199,12 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(new MessageResponse("Error: Data integrity violation."));
         }
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<?> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
     }
 
     @GetMapping("/getUserByEmail/{email}")
@@ -220,85 +216,20 @@ public class AuthController {
             return ResponseEntity.notFound().build();
         }
     }
-    @PutMapping("/users/updateType/{userId}")
-    public ResponseEntity<?> updateUserType(
-            @PathVariable Long userId,
-            @RequestParam String newType) {  // <-- get new type from request
-        User updatedUser = userService.updateUserType(userId, newType);
-        return ResponseEntity.ok(updatedUser);
-    }
 
-    @PutMapping("/update/{userId}")
-    public ResponseEntity<?> updateUser(@PathVariable Long userId, @Valid @RequestBody SignupRequest signUpRequest) {
-        if (!userRepository.existsById(userId)) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(new MessageResponse("Error: User not found with id " + userId));
-        }
-        User updatedUser;
-        if (signUpRequest.getType().toLowerCase().startsWith("admin")) {
-            Admin admin = new Admin();
-            admin.setId(userId);
-            admin.setNom(signUpRequest.getNom());
-            admin.setPrenom(signUpRequest.getPrenom());
-            admin.setEmail(signUpRequest.getEmail());
-            admin.setTel(signUpRequest.getTel());
-            admin.setType(signUpRequest.getType());
-            admin.setCin(signUpRequest.getCin());
-            admin.setLongitude(signUpRequest.getLongitude());
-            admin.setLatitude(signUpRequest.getLatitude());
-            admin.setVille(signUpRequest.getVille());
-            admin.setPays(signUpRequest.getPays());
-            admin.setCodePostal(signUpRequest.getCodePostal());
-            admin.setPhoto(signUpRequest.getPhoto());
-            admin.setPassword(encoder.encode(signUpRequest.getPassword()));
-            updatedUser = admin;
-            adminService.update((Admin) updatedUser);
-        } else if (signUpRequest.getType().toLowerCase().startsWith("enseignant")) {
-            Enseignant enseignant = new Enseignant();
-            enseignant.setId(userId);
-            enseignant.setNom(signUpRequest.getNom());
-            enseignant.setPrenom(signUpRequest.getPrenom());
-            enseignant.setEmail(signUpRequest.getEmail());
-            enseignant.setTel(signUpRequest.getTel());
-            enseignant.setType(signUpRequest.getType());
-            enseignant.setCin(signUpRequest.getCin());
-            enseignant.setLongitude(signUpRequest.getLongitude());
-            enseignant.setLatitude(signUpRequest.getLatitude());
-            enseignant.setVille(signUpRequest.getVille());
-            enseignant.setPays(signUpRequest.getPays());
-            enseignant.setCodePostal(signUpRequest.getCodePostal());
-            enseignant.setPhoto(signUpRequest.getPhoto());
-            enseignant.setPassword(encoder.encode(signUpRequest.getPassword()));
-            updatedUser = enseignant;
-            enseignantService.updateEnseignant((Enseignant) updatedUser);
+    @GetMapping("/getUserById/{userId}")
+    public ResponseEntity<User> getUserById(@PathVariable Integer userId) {
+        User user = userService.getUserById(userId);
+        if (user != null) {
+            return ResponseEntity.ok(user);
         } else {
-            User user = new User();
-            user.setId(userId);
-            user.setNom(signUpRequest.getNom());
-            user.setPrenom(signUpRequest.getPrenom());
-            user.setEmail(signUpRequest.getEmail());
-            user.setTel(signUpRequest.getTel());
-            user.setType(("etudiant"));
-            user.setCin(signUpRequest.getCin());
-            user.setLongitude(signUpRequest.getLongitude());
-            user.setLatitude(signUpRequest.getLatitude());
-            user.setVille(signUpRequest.getVille());
-            user.setPays(signUpRequest.getPays());
-            user.setCodePostal(signUpRequest.getCodePostal());
-            user.setPhoto(signUpRequest.getPhoto());
-            user.setPassword(encoder.encode(signUpRequest.getPassword()));
-            updatedUser = user;
-            userService.update(updatedUser);
+            return ResponseEntity.notFound().build();
         }
-
-
-        return ResponseEntity.ok(new MessageResponse("Utilisateur mis à jour avec succès !"));
     }
 
     @DeleteMapping("/deleteUser/{userId}")
     @Transactional
-    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+    public ResponseEntity<?> deleteUser(@PathVariable Integer userId) {
         if (!userRepository.existsById(userId)) {
             return ResponseEntity
                     .badRequest()
@@ -308,45 +239,39 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("Utilisateur supprimé avec succès."));
     }
 
-
-    @DeleteMapping("/deleteAdmin/{adminId}")
-    public ResponseEntity<?> deleteAdmin(@PathVariable Long adminId) {
-        if (!adminRepository.existsById(adminId)) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(new MessageResponse("Error: Admin not found with id " + adminId));
+    @PostMapping("/checkEmailUnique")
+    public ResponseEntity<?> checkEmailUnique(@RequestBody String email) {
+        try {
+            boolean isUnique = userService.isEmailUnique(email);
+            if (isUnique) {
+                return ResponseEntity.ok("Email is unique.");
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email is already in use!");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error.");
         }
-
-        adminService.deleteAdmin(adminId);
-        return ResponseEntity.ok(new MessageResponse("Admin deleted successfully."));
     }
 
-
-
-
-
-    @GetMapping("/admins")
-    public ResponseEntity<?> getAllAdmins() {
-        List<Admin> admins = adminService.getAll();
-        return ResponseEntity.ok(admins);
-    }
-
-    @GetMapping("/admins/{adminId}")
-    public ResponseEntity<?> getAdminById(@PathVariable Long adminId) {
-        Admin admin = adminService.getById(adminId);
-        if (admin == null) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Admin not found with id " + adminId));
+    @GetMapping("/api/{nomuser}")
+    public ResponseEntity<Object> findUserIdByNom(@PathVariable String nomuser) {
+        try {
+            Integer userId = userService.findUserIdByNom(nomuser);
+            return ResponseEntity.ok(userId);
+        } catch (UsernameNotFoundException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utilisateur non trouvé avec le nom : " + nomuser);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Une erreur s'est produite lors de la recherche de l'utilisateur.");
         }
-        return ResponseEntity.ok(admin);
     }
-
-
 
     @GetMapping("/getUserIdByName/{nom}")
     public ResponseEntity<Map<String, Object>> getUserIdByName(@PathVariable String nom) {
         Map<String, Object> response = new HashMap<>();
         try {
-            Long userId = userService.getUserIdByName(nom);
+            Integer userId = userService.getUserIdByName(nom);
             if (userId != null) {
                 response.put("userId", userId);
                 return ResponseEntity.ok().body(response);
@@ -360,61 +285,263 @@ public class AuthController {
         }
     }
 
+    // ==================== ADMINISTRATEUR ENDPOINTS ====================
 
-
-    @PutMapping("/admin/update")
-    public ResponseEntity<Admin> updateAdmin(@RequestBody Admin admin) {
-        return ResponseEntity.ok(adminService.update(admin));
+    @GetMapping("/administrateurs")
+    public ResponseEntity<?> getAllAdministrateurs() {
+        List<Administrateur> administrateurs = adminService.getAll();
+        return ResponseEntity.ok(administrateurs);
     }
 
 
-    @PostMapping("/enseignant")
-    public ResponseEntity<Enseignant> registerEnseignant(@RequestBody Enseignant e) {
-        return ResponseEntity.ok(adminService.saveEnseignant(e));
+    @GetMapping("/administrateurs/{adminId}")
+    public ResponseEntity<?> getAdministrateurById(@PathVariable Integer adminId) {
+        Administrateur administrateur = adminService.getById(adminId);
+        if (administrateur == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Administrateur not found with id " + adminId));
+        }
+        return ResponseEntity.ok(administrateur);
     }
 
-    @GetMapping("/enseignant")
-    public ResponseEntity<List<Enseignant>> getAllEnseignants() {
-        return ResponseEntity.ok(adminService.getAllEnseignants());
+    @PostMapping("/administrateurs")
+    public ResponseEntity<Administrateur> createAdministrateur(@RequestBody Administrateur administrateur) {
+        return ResponseEntity.ok(adminService.save(administrateur));
+    }
+    @DeleteMapping("/administrateurs/{adminId}")
+    public ResponseEntity<?> deleteAdministrateur(@PathVariable Integer adminId) {
+
+        Administrateur admin = adminService.getById(adminId);
+        if (admin == null) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(new MessageResponse("Administrateur introuvable avec l'id : " + adminId));
+        }
+
+        adminService.deleteAdmin(adminId);
+        return ResponseEntity.ok(
+                new MessageResponse("Administrateur supprimé avec succès.")
+        );
     }
 
-    @PutMapping("/enseignant/update")
-    public ResponseEntity<Enseignant> updateEnseignant(@RequestBody Enseignant e) {
-        return ResponseEntity.ok(adminService.updateEnseignant(e));
+    @PutMapping("/administrateurs/{adminId}")
+    public ResponseEntity<Administrateur> updateAdministrateur(
+            @PathVariable Integer adminId,
+            @RequestBody Administrateur administrateur) {
+
+        administrateur.setId(adminId);
+        Administrateur updatedAdmin = adminService.update(administrateur);
+        return ResponseEntity.ok(updatedAdmin);
     }
 
 
 
-    @GetMapping("/etudiant")
-    public ResponseEntity<List<Etudiant>> getAllEtudiants() {
-        return ResponseEntity.ok(etudiantService.getAll());
+    @PostMapping("/administrateurs/{adminId}/configure-system")
+    public ResponseEntity<?> configureSystem(@PathVariable Integer adminId) {
+        adminService.configureSystem();
+        return ResponseEntity.ok(new MessageResponse("System configured successfully."));
     }
 
-    @PutMapping("/etudiant/update")
-    public ResponseEntity<Etudiant> updateEtudiant(@RequestBody Etudiant e) {
-        return ResponseEntity.ok(etudiantService.update(e));
+    @PostMapping("/administrateurs/{adminId}/manage-comments")
+    public ResponseEntity<?> manageComments(@PathVariable Integer adminId) {
+        adminService.manageComments();
+        return ResponseEntity.ok(new MessageResponse("Comments managed successfully."));
     }
 
-    @DeleteMapping("/etudiant/delete/{id}")
-    public ResponseEntity<Void> deleteEtudiant(@PathVariable Long id) {
-        etudiantService.deleteEtudiant(id);
-        return ResponseEntity.ok().build();
-    }
-    @PostMapping("/etudiant/save")
-    public ResponseEntity<Etudiant> saveEtudiant(@RequestBody Etudiant e) {
-        Etudiant savedEtudiant = etudiantService.save(e);
-        return ResponseEntity.ok(savedEtudiant);
+    // ==================== CLIENT ENDPOINTS ====================
+
+    @GetMapping("/clients")
+    public ResponseEntity<?> getAllClients() {
+        List<Client> clients = clientService.getAll();
+        return ResponseEntity.ok(clients);
     }
 
-    @GetMapping("/etudiant/{id}")
-    public ResponseEntity<Etudiant> getEtudiantById(@PathVariable Long id) {
-        Etudiant etudiant = etudiantService.getById(id);
-        if (etudiant != null) {
-            return ResponseEntity.ok(etudiant);
-        } else {
-            return ResponseEntity.notFound().build();
+    @GetMapping("/clients/{clientId}")
+    public ResponseEntity<?> getClientById(@PathVariable Integer clientId) {
+        Client client = clientService.getById(clientId);
+        if (client == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Client not found with id " + clientId));
+        }
+        return ResponseEntity.ok(client);
+    }
+
+    @PostMapping("/clients")
+    public ResponseEntity<Client> createClient(@RequestBody Client client) {
+        return ResponseEntity.ok(clientService.save(client));
+    }
+
+    @PutMapping("/clients/{clientId}")
+    public ResponseEntity<Client> updateClient(@PathVariable Integer clientId, @RequestBody Client client) {
+        client.setId(clientId);
+        return ResponseEntity.ok(clientService.update(client));
+    }
+
+    @DeleteMapping("/clients/{clientId}")
+    public ResponseEntity<?> deleteClient(@PathVariable Integer clientId) {
+        clientService.deleteClient(clientId);
+        return ResponseEntity.ok(new MessageResponse("Client deleted successfully."));
+    }
+
+    // Client specific methods
+    @PostMapping("/clients/{clientId}/deposer-document")
+    public ResponseEntity<?> deposerDocument(@PathVariable Integer clientId, @RequestBody Map<String, String> request) {
+        String document = request.get("document");
+        Client updatedClient = clientService.deposerDocument(clientId, document);
+        return ResponseEntity.ok(updatedClient);
+    }
+
+    @GetMapping("/clients/{clientId}/statut-dossier")
+    public ResponseEntity<String> consulterStatutDossier(@PathVariable Integer clientId) {
+        String status = clientService.consulterStatutDossier(clientId);
+        return ResponseEntity.ok(status);
+    }
+
+    @PostMapping("/clients/{clientId}/chatbot")
+    public ResponseEntity<String> communiquerAvecChatbot(@PathVariable Integer clientId, @RequestBody Map<String, String> request) {
+        String message = request.get("message");
+        String response = clientService.communiquerAvecChatbot(clientId, message);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/clients/type/{type}")
+    public ResponseEntity<?> getClientsByType(@PathVariable String type) {
+        try {
+            TypeClient clientType = TypeClient.valueOf(type.toUpperCase());
+            List<Client> clients = clientService.findByType(clientType);
+            return ResponseEntity.ok(clients);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid client type. Must be PME, INDUSTRIEL, or COMMERCIANT"));
         }
     }
+
+    // ==================== AGENT ADMINISTRATIF ENDPOINTS ====================
+
+    @GetMapping("/agents-administratifs")
+    public ResponseEntity<?> getAllAgentsAdministratifs() {
+        List<AgentAdministratif> agents = agentAdministratifService.getAll();
+        return ResponseEntity.ok(agents);
+    }
+
+    @GetMapping("/agents-administratifs/{agentId}")
+    public ResponseEntity<?> getAgentAdministratifById(@PathVariable Integer agentId) {
+        AgentAdministratif agent = agentAdministratifService.getById(agentId);
+        if (agent == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Agent Administratif not found with id " + agentId));
+        }
+        return ResponseEntity.ok(agent);
+    }
+
+    @PostMapping("/agents-administratifs")
+    public ResponseEntity<AgentAdministratif> createAgentAdministratif(@RequestBody AgentAdministratif agent) {
+        return ResponseEntity.ok(agentAdministratifService.save(agent));
+    }
+
+    @PutMapping("/agents-administratifs/{agentId}")
+    public ResponseEntity<AgentAdministratif> updateAgentAdministratif(@PathVariable Integer agentId, @RequestBody AgentAdministratif agent) {
+        agent.setId(agentId);
+        return ResponseEntity.ok(agentAdministratifService.update(agent));
+    }
+
+    @DeleteMapping("/agents-administratifs/{agentId}")
+    public ResponseEntity<?> deleteAgentAdministratif(@PathVariable Integer agentId) {
+        agentAdministratifService.deleteAgent(agentId);
+        return ResponseEntity.ok(new MessageResponse("Agent Administratif deleted successfully."));
+    }
+
+    // Agent Administratif specific methods
+    @PostMapping("/agents-administratifs/{agentId}/valider-document")
+    public ResponseEntity<?> validerDocument(@PathVariable Integer agentId, @RequestBody Map<String, Integer> request) {
+        Integer documentId = request.get("documentId");
+        boolean result = agentAdministratifService.validerDocument(documentId);
+        return ResponseEntity.ok(new MessageResponse("Document validation result: " + result));
+    }
+
+    @PostMapping("/agents-administratifs/{agentId}/refuser-document")
+    public ResponseEntity<?> refuserDocument(@PathVariable Integer agentId, @RequestBody Map<String, Object> request) {
+        Integer documentId = (Integer) request.get("documentId");
+        String motif = (String) request.get("motif");
+        boolean result = agentAdministratifService.refuserDocument(documentId, motif);
+        return ResponseEntity.ok(new MessageResponse("Document refusal result: " + result));
+    }
+
+    @GetMapping("/agents-administratifs/{agentId}/processus-dossier/{dossierId}")
+    public ResponseEntity<String> consulterProcessusDossier(@PathVariable Integer agentId, @PathVariable Integer dossierId) {
+        String process = agentAdministratifService.consulterProcessusDossier(dossierId);
+        return ResponseEntity.ok(process);
+    }
+
+    @GetMapping("/agents-administratifs/statut/{statut}")
+    public ResponseEntity<?> getAgentsByStatut(@PathVariable String statut) {
+        List<AgentAdministratif> agents = agentAdministratifService.findByStatut(statut);
+        return ResponseEntity.ok(agents);
+    }
+
+    @GetMapping("/agents-administratifs/charge-travail/{chargeTravail}")
+    public ResponseEntity<?> getAgentsByChargeTravail(@PathVariable String chargeTravail) {
+        List<AgentAdministratif> agents = agentAdministratifService.findByChargeTravail(chargeTravail);
+        return ResponseEntity.ok(agents);
+    }
+
+    // ==================== OPERATEUR ENDPOINTS ====================
+
+    @GetMapping("/operateurs")
+    public ResponseEntity<?> getAllOperateurs() {
+        List<Operateur> operateurs = operateurService.getAll();
+        return ResponseEntity.ok(operateurs);
+    }
+
+    @GetMapping("/operateurs/{operateurId}")
+    public ResponseEntity<?> getOperateurById(@PathVariable Integer operateurId) {
+        Operateur operateur = operateurService.getById(operateurId);
+        if (operateur == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Operateur not found with id " + operateurId));
+        }
+        return ResponseEntity.ok(operateur);
+    }
+
+    @PostMapping("/operateurs")
+    public ResponseEntity<Operateur> createOperateur(@RequestBody Operateur operateur) {
+        return ResponseEntity.ok(operateurService.save(operateur));
+    }
+
+    @PutMapping("/operateurs/{operateurId}")
+    public ResponseEntity<Operateur> updateOperateur(@PathVariable Integer operateurId, @RequestBody Operateur operateur) {
+        operateur.setId(operateurId);
+        return ResponseEntity.ok(operateurService.update(operateur));
+    }
+
+    @DeleteMapping("/operateurs/{operateurId}")
+    public ResponseEntity<?> deleteOperateur(@PathVariable Integer operateurId) {
+        operateurService.deleteOperateur(operateurId);
+        return ResponseEntity.ok(new MessageResponse("Operateur deleted successfully."));
+    }
+
+    // Operateur specific methods
+    @PostMapping("/operateurs/{operateurId}/traiter-dossier")
+    public ResponseEntity<String> traiterDossier(@PathVariable Integer operateurId, @RequestBody Map<String, Integer> request) {
+        Integer dossierId = request.get("dossierId");
+        String result = operateurService.traiterDossier(dossierId, operateurId);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/operateurs/{operateurId}/ajouter-document")
+    public ResponseEntity<?> ajouterDocument(@PathVariable Integer operateurId, @RequestBody Map<String, Object> request) {
+        Integer dossierId = (Integer) request.get("dossierId");
+        String document = (String) request.get("document");
+        boolean result = operateurService.ajouterDocument(dossierId, document, operateurId);
+        return ResponseEntity.ok(new MessageResponse("Document addition result: " + result));
+    }
+
+    @GetMapping("/operateurs/type-operation/{typeOperation}")
+    public ResponseEntity<?> getOperateursByTypeOperation(@PathVariable String typeOperation) {
+        try {
+            TypeOperation type = TypeOperation.valueOf(typeOperation.toUpperCase());
+            List<Operateur> operateurs = operateurService.findByTypeOperation(type);
+            return ResponseEntity.ok(operateurs);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid operation type. Must be IMPORT, EXPORT, or MIXTE"));
+        }
+    }
+
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
@@ -426,29 +553,4 @@ public class AuthController {
         });
         return errors;
     }
-
-// ----------------- CLASSROOMS (Salles) ENDPOINTS -----------------
-    @PostMapping("/salle")
-    public ResponseEntity<Salle> saveSalle(@RequestBody Salle s) {
-        return ResponseEntity.ok(salleService.saveSalle(s));
-    }
-
-    @GetMapping("/salle")
-    public ResponseEntity<List<Salle>> getAllSalles() {
-        return ResponseEntity.ok(salleService.getAllSalles());
-    }
-
-    @PutMapping("/salle/update")
-    public ResponseEntity<Salle> updateSalle(@RequestBody Salle s) {
-        return ResponseEntity.ok(salleService.updateSalle(s));
-    }
-
-    @DeleteMapping("/salle/delete/{id}")
-    public ResponseEntity<Void> deleteSalle(@PathVariable Long id) {
-        salleService.deleteSalle(id);
-        return ResponseEntity.ok().build();
-    }
-
-
-
 }

@@ -1,17 +1,16 @@
 package com.springjwt.security.services;
 
 import com.springjwt.models.*;
-import com.springjwt.repository.AdminRepository;
-import com.springjwt.repository.EtudiantRepository;
-import com.springjwt.repository.EnseignantRepository;
+import com.springjwt.repository.AdministrateurRepository;
+import com.springjwt.repository.ClientRepository;
+import com.springjwt.repository.AgentAdministratifRepository;
+import com.springjwt.repository.OperateurRepository;
 import com.springjwt.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import javax.persistence.EntityNotFoundException;
 import javax.transaction.Transactional;
 import java.util.List;
 
@@ -22,13 +21,16 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     private UserRepository userRepository;
 
     @Autowired
-    private AdminRepository adminRepository;
+    private AdministrateurRepository administrateurRepository;
 
     @Autowired
-    private EnseignantRepository enseignantRepository;
+    private ClientRepository clientRepository;
 
     @Autowired
-    private EtudiantRepository etudiantRepository;
+    private AgentAdministratifRepository agentAdministratifRepository;
+
+    @Autowired
+    private OperateurRepository operateurRepository;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -36,51 +38,63 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         if (user == null) {
             throw new UsernameNotFoundException("User not found with email: " + email);
         }
-        return UserDetailsImpl.build(user.getType(), user);
+        return UserDetailsImpl.build(user);
     }
 
     // ------------------- GET & LIST -------------------
-    public User getUserById(Long userId) {
+    @Override
+    public User getUserById(Integer userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + userId));
     }
 
+    @Override
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
     // ------------------- SAVE -------------------
+    @Override
     public User save(User user) {
         return userRepository.save(user);
     }
 
     // ------------------- DELETE -------------------
+    @Override
     @Transactional
-    public void deleteUser(Long userId) {
+    public void deleteUser(Integer userId) {
         User user = getUserById(userId);
 
         switch (user.getType().toLowerCase()) {
-            case "admin":
-                if (adminRepository.existsById(userId)) {
-                    adminRepository.deleteById(userId);
+            case "administrateur":
+                if (administrateurRepository.existsById(userId)) {
+                    administrateurRepository.deleteById(userId);
                 } else {
-                    throw new EntityNotFoundException("Admin not found with id: " + userId);
+                    throw new UsernameNotFoundException("Administrateur not found with id: " + userId);
                 }
                 break;
 
-            case "enseignant":
-                if (enseignantRepository.existsById(userId)) {
-                    enseignantRepository.deleteById(userId);
+            case "client":
+                if (clientRepository.existsById(userId)) {
+                    clientRepository.deleteById(userId);
                 } else {
-                    throw new EntityNotFoundException("Enseignant not found with id: " + userId);
+                    throw new UsernameNotFoundException("Client not found with id: " + userId);
                 }
                 break;
 
-            case "etudiant":
-                if (etudiantRepository.existsById(userId)) {
-                    etudiantRepository.deleteById(userId);
+            case "agentadministratif":
+                if (agentAdministratifRepository.existsById(userId)) {
+                    agentAdministratifRepository.deleteById(userId);
                 } else {
-                    throw new EntityNotFoundException("Etudiant not found with id: " + userId);
+                    throw new UsernameNotFoundException("Agent Administratif not found with id: " + userId);
+                }
+                break;
+
+            case "operateur":
+                if (operateurRepository.existsById(userId)) {
+                    operateurRepository.deleteById(userId);
+                } else {
+                    throw new UsernameNotFoundException("Operateur not found with id: " + userId);
                 }
                 break;
 
@@ -88,65 +102,68 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 if (userRepository.existsById(userId)) {
                     userRepository.deleteById(userId);
                 } else {
-                    throw new EntityNotFoundException("User not found with id: " + userId);
+                    throw new UsernameNotFoundException("User not found with id: " + userId);
                 }
                 break;
         }
     }
 
     // ------------------- UPDATE -------------------
+    @Override
     @Transactional
     public void update(User updatedUser) {
         userRepository.findById(updatedUser.getId()).ifPresent(existingUser -> {
-            existingUser.setType(updatedUser.getType());
             existingUser.setNom(updatedUser.getNom());
             existingUser.setPrenom(updatedUser.getPrenom());
-            existingUser.setTel(updatedUser.getTel());
             existingUser.setEmail(updatedUser.getEmail());
-            existingUser.setPassword(updatedUser.getPassword());
-            existingUser.setCodePostal(updatedUser.getCodePostal());
-            existingUser.setPays(updatedUser.getPays());
+            existingUser.setTelephone(updatedUser.getTelephone());
             existingUser.setVille(updatedUser.getVille());
-            existingUser.setCin(updatedUser.getCin());
-            existingUser.setLongitude(updatedUser.getLongitude());
-            existingUser.setLatitude(updatedUser.getLatitude());
-
-            if (updatedUser.getPhoto() != null && !updatedUser.getPhoto().isEmpty()) {
-                existingUser.setPhoto(updatedUser.getPhoto());
-            }
+            existingUser.setMotdepasse(updatedUser.getMotdepasse());
+            existingUser.setPhoto(updatedUser.getPhoto());
 
             userRepository.save(existingUser);
         });
     }
 
     // ------------------- EMAIL & NAME UTILS -------------------
+    @Override
     public boolean isEmailUnique(String email) {
         return userRepository.findByEmail(email) == null;
     }
 
-    public Long getUserIdByName(String nom) {
+    @Override
+    public Integer getUserIdByName(String nom) {
         User user = userRepository.findByNom(nom);
-        if (user == null) throw new UsernameNotFoundException("User not found with name: " + nom);
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found with name: " + nom);
+        }
         return user.getId();
     }
 
+    @Override
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email);
     }
 
-    // ------------------- TYPE UPDATE -------------------
-    @Transactional
-    public User updateUserType(Long userId, String newType) {
+    @Override
+    public User updateUserType(Integer userId, String newType) {
         User user = getUserById(userId);
         user.setType(newType.toLowerCase());
         return userRepository.save(user);
     }
-    public Long findUserIdByNom(String nom) {
-        User user = userRepository.findByNom(nom); // Find user by name
+
+    @Override
+    public Integer findUserIdByNom(String nomuser) {
+        User user = userRepository.findByNom(nomuser);
         if (user == null) {
-            throw new UsernameNotFoundException("User not found with name: " + nom);
+            throw new UsernameNotFoundException("User not found with name: " + nomuser);
         }
-        return user.getId(); // Return the ID of the user
+        return user.getId();
     }
 
+    @Override
+    public String getUserType(String email) {
+        User user = userRepository.findByEmail(email);
+        return user != null ? user.getType() : null;
+    }
 }

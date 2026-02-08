@@ -5,18 +5,16 @@ import com.springjwt.models.User;
 import java.util.List;
 import java.util.Optional;
 
-
-public interface UserDetailsService {
+public interface UserDetailsService extends org.springframework.security.core.userdetails.UserDetailsService {
     User save(User user);
     boolean isEmailUnique(String email);
     String getUserType(String email);
     List<User> getAllUsers();
-    void deleteUser(Long userId);
+    void deleteUser(Integer userId);
     void update(User user);
-    User getUserById (User userId);
-   User getUserByEmail(String email);
-    User updateUserType(Long userId);
-   Long getUserIdByName(String nom) ;
-
-
+    User getUserById(Integer userId);
+    User getUserByEmail(String email);
+    User updateUserType(Integer userId, String newType);
+    Integer getUserIdByName(String nom);
+    Integer findUserIdByNom(String nomuser);
 }

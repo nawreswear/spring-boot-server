@@ -5,29 +5,23 @@ import com.springjwt.models.*;
 import java.util.List;
 
 public interface AdminService {
-    Admin save(Admin a);
-    void deleteAdmin(Long userId);
-    List<Admin> getAll();
-    Admin getById(Long adminId);
-
-    Admin update(Admin updatedAdmin);
-
-    Enseignant saveEnseignant(Enseignant e);
-    List<Enseignant> getAllEnseignants();
-    void deleteEnseignant(Long id);
-    Enseignant updateEnseignant(Enseignant e);
-
-    Etudiant saveEtudiant(Etudiant e);
-    List<Etudiant> getAllEtudiants();
-    void deleteEtudiant(Long id);
-    Etudiant updateEtudiant(Etudiant e);
-
-    // Courses
-
-
-    // Classrooms (Salles)
-    Salle saveSalle(Salle s);
-    List<Salle> getAllSalles();
-    void deleteSalle(Long id);
-    Salle updateSalle(Salle s);
+    Administrateur save(Administrateur a);
+    void deleteAdmin(Integer userId);
+    List<Administrateur> getAll();
+    Administrateur getById(Integer adminId);
+    Administrateur update(Administrateur updatedAdmin);
+    
+    // User management methods
+    List<User> getAllUsers();
+    User getUserById(Integer id);
+    void deleteUser(Integer id);
+    
+    // System configuration methods
+    void configureSystem();
+    
+    // Comment management methods
+    void manageComments();
+    
+    // Responsibility display methods
+    String displayResponsibilities();
 }

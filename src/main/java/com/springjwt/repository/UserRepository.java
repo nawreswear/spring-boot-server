@@ -13,18 +13,15 @@ import com.springjwt.models.User;
 import javax.transaction.Transactional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long>{
+public interface UserRepository extends JpaRepository<User, Integer>{
 
     Boolean existsByEmail(String email);
 
     User findByEmail(String email);
     User findByNom(String nom);
-    boolean existsByType(String type);
 
     User findByEmailIgnoreCase(String email);
-    default boolean existsAdmin() {
-        return existsByType("admin");
-    };
+    
     @Query("SELECT u FROM User u WHERE u.nom = :nom")
     User findPhotobyuser(@Param("nom") String nom);
 

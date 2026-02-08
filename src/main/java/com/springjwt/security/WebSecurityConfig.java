@@ -1,3 +1,5 @@
+
+
 package com.springjwt.security;
 
 import com.springjwt.security.services.UserDetailsServiceImpl;
@@ -5,11 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -28,13 +30,16 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     private PasswordEncoder passwordEncoder;
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder);
+        return authProvider;
     }
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder);
+        auth.authenticationProvider(authenticationProvider());
     }
 
     @Override
@@ -46,14 +51,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable()
-                .cors().and() // Configuration CORS ici
+                .cors().and()
                 .authorizeRequests()
                 .antMatchers("/signin").permitAll()
-                .antMatchers("/vendeurs/**").permitAll()
-                .antMatchers("/admins/**").permitAll()
-                .antMatchers("/user/**").permitAll()
                 .antMatchers("/signup").permitAll()
-                .antMatchers("/salle/**").permitAll()  // allow salle endpoints
                 .antMatchers("/users/**").permitAll()
                 .antMatchers("/user/**").permitAll()
                 .antMatchers("/addUser/**").permitAll()
@@ -65,10 +66,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/cours").permitAll()
                 .antMatchers("/cours/**").permitAll()
                 .antMatchers("/getUserByEmail/**").permitAll()
-               // .antMatchers("/addsalle").permitAll()
-                .antMatchers("/salle").permitAll()
-                .antMatchers("/enseignant/**").permitAll()
-                .antMatchers("/etudiant/**").permitAll()
+                .antMatchers("/administrateurs/**").permitAll()
+                .antMatchers("/clients/**").permitAll()
+                .antMatchers("/agents-administratifs/**").permitAll()
+                .antMatchers("/operateurs/**").permitAll()
                 .antMatchers("/getUserById/{userId}/**").permitAll()
                 .antMatchers("/users/updatevendeurType/{userId}/**").permitAll()
                 .anyRequest().authenticated()
@@ -79,21 +80,20 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .logout()
                 .permitAll();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200")); // Autoriser ces origines
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Autoriser ces méthodes
-        configuration.setAllowedHeaders(Arrays.asList("*")); // Autoriser tous les en-têtes
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Allow-Headers","Access-Control-Allow-Methods"));
-        configuration.setAllowCredentials(true); // Autoriser les cookies
-        configuration.setMaxAge(3600L); // Durée maximale de la requête préalable (preflight)
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }
-
-
 }
