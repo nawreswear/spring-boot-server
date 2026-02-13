@@ -1,5 +1,6 @@
 package com.springjwt.payload.request;
 
+import com.springjwt.models.TypeUtilisateur;
 import javax.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -35,15 +36,26 @@ public class SignupRequest {
     @Size(max = 50)
     private String ville;
 
+    @NotBlank
+    @Size(max = 50)
+    private String pays;
+
+    @NotBlank
+    @Size(max = 255)
+    private String adresse;
+
     private String photo;
     
     // Fields for specific user types
-    private String userType;
+    private TypeUtilisateur userType;
     
     // Client specific fields
-    private String adresse;
     private Integer matriculeFiscale;
     private String typeClient;
+    
+    // Fournisseur specific fields
+    private String nomEntreprise;
+    private String registreCommerce;
     
     // AgentAdministratif specific fields
     private String statut;
@@ -56,13 +68,16 @@ public class SignupRequest {
         this.photo = photo;
     }
 
-    public SignupRequest(String nom, String prenom, String email, String motdepasse, String telephone, String ville, String photo) {
+    public SignupRequest(String nom, String prenom, String email, String motdepasse, String telephone, String ville, String pays, String adresse, String photo, TypeUtilisateur userType) {
         this.nom = nom;
         this.prenom = prenom;
         this.email = email;
         this.motdepasse = motdepasse;
         this.telephone = telephone;
         this.ville = ville;
+        this.pays = pays;
+        this.adresse = adresse;
         this.photo = photo;
+        this.userType = userType;
     }
 }

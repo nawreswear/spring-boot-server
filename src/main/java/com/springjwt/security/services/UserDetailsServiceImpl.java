@@ -9,6 +9,7 @@ import com.springjwt.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -31,6 +32,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Autowired
     private OperateurRepository operateurRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -65,8 +69,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public void deleteUser(Integer userId) {
         User user = getUserById(userId);
 
-        switch (user.getType().toLowerCase()) {
-            case "administrateur":
+        switch (user.getType()) {
+            case ADMINISTRATEUR:
                 if (administrateurRepository.existsById(userId)) {
                     administrateurRepository.deleteById(userId);
                 } else {
@@ -74,7 +78,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 }
                 break;
 
-            case "client":
+            case CLIENT:
                 if (clientRepository.existsById(userId)) {
                     clientRepository.deleteById(userId);
                 } else {
@@ -82,7 +86,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 }
                 break;
 
-            case "agentadministratif":
+            case AGENT_ADMINISTRATIF:
                 if (agentAdministratifRepository.existsById(userId)) {
                     agentAdministratifRepository.deleteById(userId);
                 } else {
@@ -90,7 +94,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 }
                 break;
 
-            case "operateur":
+            case OPERATEUR:
                 if (operateurRepository.existsById(userId)) {
                     operateurRepository.deleteById(userId);
                 } else {
@@ -118,9 +122,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             existingUser.setEmail(updatedUser.getEmail());
             existingUser.setTelephone(updatedUser.getTelephone());
             existingUser.setVille(updatedUser.getVille());
-            existingUser.setMotdepasse(updatedUser.getMotdepasse());
+            // Encoder le mot de passe s'il est fourni et différent
+            if (updatedUser.getMotdepasse() != null && !updatedUser.getMotdepasse().trim().isEmpty()) {
+                existingUser.setMotdepasse(passwordEncoder.encode(updatedUser.getMotdepasse()));
+            }
             existingUser.setPhoto(updatedUser.getPhoto());
-
             userRepository.save(existingUser);
         });
     }
@@ -148,7 +154,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public User updateUserType(Integer userId, String newType) {
         User user = getUserById(userId);
-        user.setType(newType.toLowerCase());
+        user.setType(TypeUtilisateur.valueOf(newType.toUpperCase()));
         return userRepository.save(user);
     }
 
@@ -162,7 +168,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     @Override
-    public String getUserType(String email) {
+    public TypeUtilisateur getUserType(String email) {
         User user = userRepository.findByEmail(email);
         return user != null ? user.getType() : null;
     }

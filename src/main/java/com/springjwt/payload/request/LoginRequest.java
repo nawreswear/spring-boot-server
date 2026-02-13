@@ -1,5 +1,6 @@
 package com.springjwt.payload.request;
 
+import com.springjwt.models.TypeUtilisateur;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,9 +21,9 @@ public class LoginRequest {
     @Size(max = 255)
     private String motdepasse;
     
-    private String userType;
+    private TypeUtilisateur userType;
 
-    public LoginRequest(@NotBlank String email, @NotBlank String motdepasse, String userType) {
+    public LoginRequest(@NotBlank String email, @NotBlank String motdepasse, TypeUtilisateur userType) {
         super();
         this.email = email;
         this.motdepasse = motdepasse;

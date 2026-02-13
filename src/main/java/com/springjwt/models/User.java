@@ -42,10 +42,19 @@ public class User {
     @Size(max = 50)
     private String ville;
 
+    @NotBlank
+    @Size(max = 50)
+    private String pays;
+
+    @NotBlank
+    @Size(max = 255)
+    private String adresse;
+
     private String photo;
     
-    @Column(name = "type")
-    private String type;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private TypeUtilisateur type;
 
     public User(Integer id) {
         this.id = id;

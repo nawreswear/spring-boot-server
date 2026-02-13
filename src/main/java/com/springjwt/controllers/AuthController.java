@@ -1,10 +1,12 @@
 package com.springjwt.controllers;
+
 import com.springjwt.models.*;
 import com.springjwt.payload.request.LoginRequest;
 import com.springjwt.payload.request.SignupRequest;
 import com.springjwt.payload.response.JwtResponse;
 import com.springjwt.payload.response.MessageResponse;
 import com.springjwt.repository.AdministrateurRepository;
+import com.springjwt.repository.FournisseurRepository;
 import com.springjwt.repository.UserRepository;
 import com.springjwt.security.jwt.JwtUtils;
 import com.springjwt.security.services.*;
@@ -43,6 +45,9 @@ public class AuthController {
     AdministrateurRepository administrateurRepository;
 
     @Autowired
+    private FournisseurRepository fournisseurRepository;
+
+    @Autowired
     ClientService clientService;
 
     @Autowired
@@ -50,6 +55,9 @@ public class AuthController {
 
     @Autowired
     OperateurService operateurService;
+
+    @Autowired
+    private FournisseurService fournisseurService;
 
     @Autowired
     PasswordEncoder encoder;
@@ -96,91 +104,108 @@ public class AuthController {
             }
 
             User newUser;
-            String userType = signUpRequest.getUserType();
+            TypeUtilisateur userType = signUpRequest.getUserType();
 
-            if ("administrateur".equalsIgnoreCase(userType)) {
+            if (userType == TypeUtilisateur.ADMINISTRATEUR) {
                 Administrateur administrateur = new Administrateur();
                 administrateur.setNom(signUpRequest.getNom());
                 administrateur.setPrenom(signUpRequest.getPrenom());
                 administrateur.setEmail(signUpRequest.getEmail());
                 administrateur.setTelephone(signUpRequest.getTelephone());
                 administrateur.setVille(signUpRequest.getVille());
+                administrateur.setPays(signUpRequest.getPays());
+                administrateur.setAdresse(signUpRequest.getAdresse());
                 administrateur.setMotdepasse(encoder.encode(signUpRequest.getMotdepasse()));
                 administrateur.setPhoto(signUpRequest.getPhoto());
-                administrateur.setType("administrateur");
+                administrateur.setType(TypeUtilisateur.ADMINISTRATEUR);
                 newUser = administrateur;
                 adminService.save(administrateur);
 
-            } else if ("client".equalsIgnoreCase(userType)) {
+            } else if (userType == TypeUtilisateur.CLIENT) {
                 Client client = new Client();
                 client.setNom(signUpRequest.getNom());
                 client.setPrenom(signUpRequest.getPrenom());
                 client.setEmail(signUpRequest.getEmail());
                 client.setTelephone(signUpRequest.getTelephone());
                 client.setVille(signUpRequest.getVille());
+                client.setPays(signUpRequest.getPays());
+                client.setAdresse(signUpRequest.getAdresse());
                 client.setMotdepasse(encoder.encode(signUpRequest.getMotdepasse()));
                 client.setPhoto(signUpRequest.getPhoto());
-                client.setType("client");
-                
-                // Set client-specific fields
-                if (signUpRequest.getAdresse() != null) {
-                    client.setAdresse(signUpRequest.getAdresse());
-                }
+                client.setType(TypeUtilisateur.CLIENT);
+                newUser = client;
                 if (signUpRequest.getMatriculeFiscale() != null) {
                     client.setMatriculeFiscale(signUpRequest.getMatriculeFiscale());
                 }
                 if (signUpRequest.getTypeClient() != null) {
                     client.setTypeClient(TypeClient.valueOf(signUpRequest.getTypeClient().toUpperCase()));
                 }
-                
-                newUser = client;
                 clientService.save(client);
 
-            } else if ("agentadministratif".equalsIgnoreCase(userType)) {
+            } else if (userType == TypeUtilisateur.AGENT_ADMINISTRATIF) {
                 AgentAdministratif agent = new AgentAdministratif();
                 agent.setNom(signUpRequest.getNom());
                 agent.setPrenom(signUpRequest.getPrenom());
                 agent.setEmail(signUpRequest.getEmail());
                 agent.setTelephone(signUpRequest.getTelephone());
                 agent.setVille(signUpRequest.getVille());
+                agent.setPays(signUpRequest.getPays());
+                agent.setAdresse(signUpRequest.getAdresse());
                 agent.setMotdepasse(encoder.encode(signUpRequest.getMotdepasse()));
                 agent.setPhoto(signUpRequest.getPhoto());
-                agent.setType("agentadministratif");
-                
-                // Set agent-specific fields
+                agent.setType(TypeUtilisateur.AGENT_ADMINISTRATIF);
+                newUser = agent;
                 if (signUpRequest.getStatut() != null) {
                     agent.setStatut(signUpRequest.getStatut());
                 }
                 if (signUpRequest.getChargeTravail() != null) {
                     agent.setChargeTravail(signUpRequest.getChargeTravail());
                 }
-                
-                newUser = agent;
                 agentAdministratifService.save(agent);
 
-            } else if ("operateur".equalsIgnoreCase(userType)) {
+            } else if (userType == TypeUtilisateur.OPERATEUR) {
                 Operateur operateur = new Operateur();
                 operateur.setNom(signUpRequest.getNom());
                 operateur.setPrenom(signUpRequest.getPrenom());
                 operateur.setEmail(signUpRequest.getEmail());
                 operateur.setTelephone(signUpRequest.getTelephone());
                 operateur.setVille(signUpRequest.getVille());
+                operateur.setPays(signUpRequest.getPays());
+                operateur.setAdresse(signUpRequest.getAdresse());
                 operateur.setMotdepasse(encoder.encode(signUpRequest.getMotdepasse()));
                 operateur.setPhoto(signUpRequest.getPhoto());
-                operateur.setType("operateur");
-                
-                // Set operateur-specific fields
+                operateur.setType(TypeUtilisateur.OPERATEUR);
+                newUser = operateur;
                 if (signUpRequest.getTypeOperation() != null) {
                     operateur.setTypeOperation(TypeOperation.valueOf(signUpRequest.getTypeOperation().toUpperCase()));
                 }
-                
-                newUser = operateur;
                 operateurService.save(operateur);
+
+            } else if (userType == TypeUtilisateur.FOURNISSEUR) {
+                Fournisseur fournisseur = new Fournisseur();
+                fournisseur.setNom(signUpRequest.getNom());
+                fournisseur.setPrenom(signUpRequest.getPrenom());
+                fournisseur.setEmail(signUpRequest.getEmail());
+                fournisseur.setTelephone(signUpRequest.getTelephone());
+                fournisseur.setVille(signUpRequest.getVille());
+                fournisseur.setPays(signUpRequest.getPays());
+                fournisseur.setAdresse(signUpRequest.getAdresse());
+                fournisseur.setMotdepasse(encoder.encode(signUpRequest.getMotdepasse()));
+                fournisseur.setPhoto(signUpRequest.getPhoto());
+                fournisseur.setType(TypeUtilisateur.FOURNISSEUR);
+                newUser = fournisseur;
+                if (signUpRequest.getNomEntreprise() != null) {
+                    fournisseur.setNomEntreprise(signUpRequest.getNomEntreprise());
+                }
+                if (signUpRequest.getRegistreCommerce() != null) {
+                    fournisseur.setRegistreCommerce(signUpRequest.getRegistreCommerce());
+                }
+                fournisseurService.save(fournisseur);
 
             } else {
                 return ResponseEntity
                         .badRequest()
-                        .body(new MessageResponse("Error: Type must be administrateur, client, agentadministratif, or operateur!"));
+                        .body(new MessageResponse("Error: Type must be ADMINISTRATEUR, CLIENT, AGENT_ADMINISTRATIF, OPERATEUR, or FOURNISSEUR!"));
             }
 
             // Authenticate and generate JWT
@@ -303,10 +328,18 @@ public class AuthController {
         return ResponseEntity.ok(administrateur);
     }
 
-    @PostMapping("/administrateurs")
+   /* @PostMapping("/administrateurs")
     public ResponseEntity<Administrateur> createAdministrateur(@RequestBody Administrateur administrateur) {
         return ResponseEntity.ok(adminService.save(administrateur));
-    }
+    }*/
+   @PostMapping("/administrateurs")
+   public ResponseEntity<Administrateur> createAdministrateur(@RequestBody Administrateur administrateur) {
+       administrateur.setMotdepasse(
+               encoder.encode(administrateur.getMotdepasse())
+       );
+       return ResponseEntity.ok(adminService.save(administrateur));
+   }
+
     @DeleteMapping("/administrateurs/{adminId}")
     public ResponseEntity<?> deleteAdministrateur(@PathVariable Integer adminId) {
 
@@ -364,10 +397,18 @@ public class AuthController {
         return ResponseEntity.ok(client);
     }
 
-    @PostMapping("/clients")
+    /*@PostMapping("/clients")
     public ResponseEntity<Client> createClient(@RequestBody Client client) {
         return ResponseEntity.ok(clientService.save(client));
+    }*/
+    @PostMapping("/clients")
+    public ResponseEntity<Client> createClient(@RequestBody Client client) {
+        client.setMotdepasse(
+                encoder.encode(client.getMotdepasse())
+        );
+        return ResponseEntity.ok(clientService.save(client));
     }
+
 
     @PutMapping("/clients/{clientId}")
     public ResponseEntity<Client> updateClient(@PathVariable Integer clientId, @RequestBody Client client) {
@@ -430,10 +471,18 @@ public class AuthController {
         return ResponseEntity.ok(agent);
     }
 
-    @PostMapping("/agents-administratifs")
+   /* @PostMapping("/agents-administratifs")
     public ResponseEntity<AgentAdministratif> createAgentAdministratif(@RequestBody AgentAdministratif agent) {
         return ResponseEntity.ok(agentAdministratifService.save(agent));
-    }
+    }*/
+   @PostMapping("/agents-administratifs")
+   public ResponseEntity<AgentAdministratif> createAgentAdministratif(@RequestBody AgentAdministratif agent) {
+       agent.setMotdepasse(
+               encoder.encode(agent.getMotdepasse())
+       );
+       return ResponseEntity.ok(agentAdministratifService.save(agent));
+   }
+
 
     @PutMapping("/agents-administratifs/{agentId}")
     public ResponseEntity<AgentAdministratif> updateAgentAdministratif(@PathVariable Integer agentId, @RequestBody AgentAdministratif agent) {
@@ -498,10 +547,15 @@ public class AuthController {
         return ResponseEntity.ok(operateur);
     }
 
+
     @PostMapping("/operateurs")
     public ResponseEntity<Operateur> createOperateur(@RequestBody Operateur operateur) {
+        operateur.setMotdepasse(
+                encoder.encode(operateur.getMotdepasse())
+        );
         return ResponseEntity.ok(operateurService.save(operateur));
     }
+
 
     @PutMapping("/operateurs/{operateurId}")
     public ResponseEntity<Operateur> updateOperateur(@PathVariable Integer operateurId, @RequestBody Operateur operateur) {
@@ -540,6 +594,50 @@ public class AuthController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid operation type. Must be IMPORT, EXPORT, or MIXTE"));
         }
+    }
+
+    // ==================== FOURNISSEUR ENDPOINTS ====================
+
+    @GetMapping("/fournisseurs")
+    public ResponseEntity<?> getAllFournisseurs() {
+        List<Fournisseur> fournisseurs = fournisseurService.getAll();
+        return ResponseEntity.ok(fournisseurs);
+    }
+
+    @GetMapping("/fournisseurs/{fournisseurId}")
+    public ResponseEntity<?> getFournisseurById(@PathVariable Integer fournisseurId) {
+        Fournisseur fournisseur = fournisseurService.getById(fournisseurId);
+        if (fournisseur == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: Fournisseur not found with id " + fournisseurId));
+        }
+        return ResponseEntity.ok(fournisseur);
+    }
+
+    @PostMapping("/fournisseurs")
+    public ResponseEntity<Fournisseur> createFournisseur(@RequestBody Fournisseur fournisseur) {
+        fournisseur.setMotdepasse(
+                encoder.encode(fournisseur.getMotdepasse())
+        );
+        return ResponseEntity.ok(fournisseurService.save(fournisseur));
+    }
+
+    @PutMapping("/fournisseurs/{fournisseurId}")
+    public ResponseEntity<Fournisseur> updateFournisseur(@PathVariable Integer fournisseurId, @RequestBody Fournisseur fournisseur) {
+        fournisseur.setId(fournisseurId);
+        return ResponseEntity.ok(fournisseurService.update(fournisseur));
+    }
+
+    @DeleteMapping("/fournisseurs/{fournisseurId}")
+    public ResponseEntity<?> deleteFournisseur(@PathVariable Integer fournisseurId) {
+        fournisseurService.deleteFournisseur(fournisseurId);
+        return ResponseEntity.ok(new MessageResponse("Fournisseur deleted successfully."));
+    }
+
+    @GetMapping("/fournisseurs/entreprise/{nomEntreprise}")
+    public ResponseEntity<?> getFournisseurByNomEntreprise(@PathVariable String nomEntreprise) {
+        return fournisseurService.findByNomEntreprise(nomEntreprise)
+                .map(fournisseur -> ResponseEntity.ok(fournisseur))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)

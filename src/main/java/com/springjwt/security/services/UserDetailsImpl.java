@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.GrantedAuthority;
 
 import com.springjwt.models.User;
+import com.springjwt.models.TypeUtilisateur;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -20,7 +21,7 @@ public class UserDetailsImpl implements UserDetails {
     private Integer id;
     private String nom;
     private String prenom;
-    private String type;
+    private TypeUtilisateur type;
     private String telephone;
     private String email;
     private String photo;
@@ -28,7 +29,7 @@ public class UserDetailsImpl implements UserDetails {
     private String ville;
     private Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetailsImpl(Integer id, String nom, String prenom, String type, String telephone, 
+    public UserDetailsImpl(Integer id, String nom, String prenom, TypeUtilisateur type, String telephone, 
                         String email, String ville, String photo, String motdepasse, 
                         Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
